@@ -168,17 +168,26 @@ def main() -> None:
                         if c == "embedding":
                             vals.append("'" + str(v) + "'")
                         else:
-                            inner = ",".join('"' + str(x).replace('"', '\\"') + '"' for x in v)
-                            vals.append("'{" + inner + "}'")
+                            # Escape for the Postgres array literal (backslash, then quote),
+                            # THEN for the enclosing SQL string. A topic like
+                            # "Floyd's Cycle Finding Algorithm" ends the statement otherwise.
+                            inner = ",".join(
+                                '"' + str(x).replace('\\', '\\\\').replace('"', '\\"') + '"'
+                                for x in v)
+                            literal = "{" + inner + "}"
+                            vals.append("'" + literal.replace("'", "''") + "'")
                     elif isinstance(v, (int, float)):
                         vals.append(str(v))
                     else:
                         vals.append("'" + str(v).replace("'", "''") + "'")
+                # DO UPDATE, not DO NOTHING: 02_seed.sql runs first with NULL
+                # embeddings for a few of these slugs, and DO NOTHING would let
+                # those win, leaving popular problems permanently unretrievable.
                 fh.write(
                     "INSERT INTO problems (slug,leetcode_id,title,description,difficulty,"
                     "source_url,topics,companies,company_count,popularity,acceptance,"
                     "recency,description_source,embedding) VALUES ("
-                    + ",".join(vals) + ") ON CONFLICT (slug) DO NOTHING;\n"
+                    + ",".join(vals) + ") ON CONFLICT (slug) DO UPDATE SET leetcode_id=EXCLUDED.leetcode_id,title=EXCLUDED.title,description=EXCLUDED.description,difficulty=EXCLUDED.difficulty,source_url=EXCLUDED.source_url,topics=EXCLUDED.topics,companies=EXCLUDED.companies,company_count=EXCLUDED.company_count,popularity=EXCLUDED.popularity,acceptance=EXCLUDED.acceptance,recency=EXCLUDED.recency,description_source=EXCLUDED.description_source,embedding=EXCLUDED.embedding;\n"
                 )
         size_mb = DUMP.stat().st_size / 1e6
         print(f"wrote {DUMP.relative_to(REPO_ROOT)} ({size_mb:.1f} MB)")
