@@ -72,9 +72,9 @@ def embed_text_for(row: dict) -> str:
 
 
 def join_rows() -> list[dict]:
-    index = [json.loads(l) for l in (OUT_DIR / "index.jsonl").read_text().splitlines() if l.strip()]
+    index = [json.loads(l) for l in (OUT_DIR / "index.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
     descs: dict[str, dict] = {}
-    for line in (OUT_DIR / "descriptions.jsonl").read_text().splitlines():
+    for line in (OUT_DIR / "descriptions.jsonl").read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         rec = json.loads(line)

@@ -53,6 +53,10 @@ export interface Example {
   output: string
   explanation?: string | null
 }
+/** Where a piece of the reconstructed problem came from. Render `inferred`
+ *  visually distinct - same treatment as uncertainties on the memory card. */
+export type Provenance = 'remembered' | 'retrieved' | 'inferred'
+
 export interface Problem {
   id?: string | null
   title: string
@@ -60,6 +64,12 @@ export interface Problem {
   constraints: string[]
   examples: Example[]
   confidence: number
+  /** Keyed by field name: title / description / constraints / examples. */
+  provenance: Record<string, Provenance>
+  /** Reader-facing caveats, e.g. "You recalled obstacles; this problem has none." */
+  notes: string[]
+  /** Seeds the Monaco buffer on the Practice screen. */
+  starter_code?: string | null
 }
 export interface ReconstructResponse {
   problem: Problem

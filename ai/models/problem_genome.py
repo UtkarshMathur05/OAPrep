@@ -66,16 +66,37 @@ class ProblemCandidate(BaseModel):
     popularity: float = 0.0
 
 
+class WorkedExample(BaseModel):
+    """One example. `input`/`output` are literal stdin/stdout text (CLAUDE.md §9)."""
+
+    input: str = ""
+    output: str = ""
+    explanation: Optional[str] = None
+
+
+class ProblemProvenance(BaseModel):
+    """Where each section came from.
+
+    Explicit fields rather than Dict[str, Provenance]: a free-form map compiles
+    to `additionalProperties`, which the Gemini Developer API rejects in a
+    response schema. Serialises to the same {"title": "...", ...} on the wire.
+    """
+
+    title: Provenance = "retrieved"
+    description: Provenance = "retrieved"
+    constraints: Provenance = "retrieved"
+    examples: Provenance = "retrieved"
+
+
 class ReconstructedProblem(BaseModel):
     """A full problem statement rebuilt from a candidate + the user's memory."""
 
     title: str
     description: str
     constraints: List[str] = Field(default_factory=list)
-    examples: List[dict] = Field(default_factory=list)
+    examples: List[WorkedExample] = Field(default_factory=list)
     confidence: float = 0.0
-    # Field name -> where it came from, e.g. {"constraints": "retrieved"}.
-    provenance: Dict[str, Provenance] = Field(default_factory=dict)
+    provenance: ProblemProvenance = Field(default_factory=ProblemProvenance)
     # Human-readable caveats: "You recalled obstacles; this problem has none."
     notes: List[str] = Field(default_factory=list)
     # Seeded into the Monaco buffer on the Practice screen.

@@ -98,11 +98,39 @@ Rebuild the full problem statement from a memory and the chosen candidate.
     "title": "Minimum Path Sum",
     "description": "...",
     "constraints": ["1 <= m, n <= 200"],
-    "examples": [{ "input": "...", "output": "...", "explanation": "..." }],
-    "confidence": 0.91
+    "examples": [{ "input": "3 3
+1 3 1
+1 5 1
+4 2 1", "output": "7", "explanation": "..." }],
+    "confidence": 0.91,
+    "provenance": {
+      "title": "retrieved",
+      "description": "inferred",
+      "constraints": "retrieved",
+      "examples": "inferred"
+    },
+    "notes": ["You recalled obstacles; this problem has none - you may be thinking of Unique Paths II."],
+    "starter_code": "import sys
+..."
   }
 }
 ```
+
+`provenance`, `notes` and `starter_code` are **additive** (added alongside the
+retrieval pipeline); existing clients are unaffected.
+
+* `provenance` — one of `remembered` / `retrieved` / `inferred` per section.
+  `remembered` means the user actually said it, `retrieved` comes from the
+  matched corpus problem, `inferred` was filled in by the model. Render
+  `inferred` visually distinct: presenting an inference as a recalled fact is
+  the one thing this product must not do (§19).
+* `notes` — reader-facing caveats, chiefly where the memory and the real problem
+  disagree.
+* `starter_code` — seeds the Monaco buffer.
+
+**Examples are stdin/stdout.** `input` is the literal text the solution reads on
+standard input and `output` is exactly what it must print — not function-call
+shorthand. Judge0 executes a script, not a method (§9).
 
 ---
 

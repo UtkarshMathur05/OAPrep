@@ -75,3 +75,30 @@ def search_candidates(
         )
         for row in rows
     ]
+
+
+_BY_ID_SQL = """
+SELECT id::text, slug, title, description, difficulty, source_url,
+       topics, companies, company_count, popularity, 0.0 AS similarity
+FROM problems
+WHERE id::text = %(id)s OR slug = %(id)s
+LIMIT 1
+"""
+
+
+def get_candidate(problem_id: str) -> Optional[ProblemCandidate]:
+    """Look up one problem by UUID or slug. Returns None if it is not there.
+
+    /reconstruct receives a candidate_id and needs the full row back; accepting
+    the slug too makes the endpoint usable by hand during the demo.
+    """
+    rows = db.query(_BY_ID_SQL, {"id": str(problem_id)})
+    if not rows:
+        return None
+    row = rows[0]
+    return ProblemCandidate(
+        id=row[0], slug=row[1], title=row[2], description=row[3],
+        platform="leetcode", difficulty=row[4], source_url=row[5],
+        topics=list(row[6] or []), companies=list(row[7] or [])[:_MAX_COMPANIES_SHOWN],
+        company_count=int(row[8] or 0), popularity=float(row[9] or 0.0),
+    )
