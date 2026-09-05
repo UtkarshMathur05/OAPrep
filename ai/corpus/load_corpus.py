@@ -168,7 +168,14 @@ def main() -> None:
                         if c == "embedding":
                             vals.append("'" + str(v) + "'")
                         else:
-                            inner = ",".join('"' + str(x).replace('"', '\\"') + '"' for x in v)
+                            # Escape BOTH: \" for the array-literal quoting,
+                            # and '' because the whole array sits inside a
+                            # single-quoted SQL string. Topic tags really do
+                            # contain apostrophes ("Dijkstra's Algorithm").
+                            inner = ",".join(
+                                '"' + str(x).replace('"', '\\"').replace("'", "''") + '"'
+                                for x in v
+                            )
                             vals.append("'{" + inner + "}'")
                     elif isinstance(v, (int, float)):
                         vals.append(str(v))
