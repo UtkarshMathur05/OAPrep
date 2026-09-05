@@ -149,7 +149,7 @@ Copy `.env.example` to `.env`. **Never commit `.env`** — it is gitignored.
 | Variable | Purpose |
 | --- | --- |
 | `GEMINI_API_KEY` | Google Gemini key ([aistudio.google.com](https://aistudio.google.com/apikey)) |
-| `GEMINI_TEXT_MODEL` | Default `gemini-2.5-flash` |
+| `GEMINI_TEXT_MODEL` | Default `gemini-3.1-flash-lite` — chosen for free-tier headroom; `gemini-3.6-flash` caps at 20 requests/day |
 | `GEMINI_EMBEDDING_MODEL` | Default `gemini-embedding-001` |
 | `EMBEDDING_DIM` | Must match `problems.embedding VECTOR(n)` — default `768` |
 | `DATABASE_URL` | `postgresql://recollect:recollect@localhost:5432/recollect` |

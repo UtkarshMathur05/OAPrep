@@ -326,8 +326,13 @@ AI responsibilities:
 * Use Gemini's **native structured output** — `response_mime_type="application/json"`
   plus `response_schema=<PydanticModel>` — never "return JSON" in the prompt text
   followed by regex repair. This removes a whole class of parse failures.
-* Model: `gemini-2.5-flash` everywhere. Do not reach for a larger model; latency
-  during a live demo matters more than marginal quality.
+* Model: `gemini-3.1-flash-lite` everywhere (`GEMINI_TEXT_MODEL`). Chosen for
+  free-tier headroom, not quality: `gemini-3.6-flash` caps at **20 requests per
+  day**, and one full recall burns three (extract, rerank, reconstruct), so the
+  whole day is ~6 runs. Lite has far more room. Do not reach for a larger model;
+  quota and latency matter more than marginal quality during a demo.
+* The disk cache keys on the model name, so **changing the model empties it**.
+  Re-warm the golden demo path after any model switch.
 * Cache every AI response to disk, keyed by a hash of the input. The golden demo
   path then runs instantly, deterministically, and offline.
 * Embeddings: `gemini-embedding-001` at 768 dimensions. Batch them; the free tier
