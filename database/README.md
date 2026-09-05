@@ -16,8 +16,14 @@ docker compose down -v    # stop and DELETE the volume
 | File | Purpose |
 | --- | --- |
 | `init/01_schema.sql` | Tables, indexes, `vector` extension |
-| `init/02_seed.sql` | Five hand-written problems, so a bare clone isn't empty |
-| `init/03_corpus.sql` | The real embedded corpus — generated, committed |
+| `init/03_corpus.sql` | The real embedded corpus — generated, committed (~12 MB) |
+| `init/04_seed_testcases.sql` | A few test cases so `/verify` is demoable |
+
+**Filename order matters.** Docker runs these alphabetically, and
+`04_seed_testcases.sql` references corpus problems by slug, so it must run after
+`03_corpus.sql`. It used to be `02_seed.sql` and inserted its own problem rows —
+those shadowed the real corpus entries through `ON CONFLICT (slug) DO NOTHING`,
+leaving five popular problems with no embedding and invisible to search.
 
 `03_corpus.sql` is produced by `python -m ai.corpus.load_corpus --dump` and is
 **not** hand-edited. If it is missing from your clone, run the pipeline in

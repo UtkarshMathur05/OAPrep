@@ -8,22 +8,43 @@ degrades to a useful message rather than a 500 (CLAUDE.md §20).
 from __future__ import annotations
 
 import logging
-from typing import Dict
-from uuid import uuid4
 
 from fastapi import HTTPException
 
-from app.config import USE_MOCK_AI
+from app.config import GEMINI_API_KEY, USE_MOCK_AI
 from app.schemas.memory import Genome, MemoryRequest, MemoryResponse
 from app.schemas.reconstruct import Problem, ReconstructRequest, ReconstructResponse
 from app.schemas.search import Candidate, SearchRequest, SearchResponse
 
 log = logging.getLogger(__name__)
 
-# Genomes live here between POST /memory and POST /reconstruct.
-# TODO(backend): replace with the problem_memories table; this is per-process
-# and does not survive a reload, which is fine for a demo and not for anything else.
-_MEMORIES: Dict[str, "object"] = {}
+def _mock_genome() -> Genome:
+    """Canned genome for mock mode and for a teammate with no API key."""
+    return Genome(
+        concepts=["grid", "dynamic programming"],
+        operations=["move right", "move down"],
+        objective="minimize cost",
+        uncertainties=["obstacles"],
+    )
+
+
+def _genome_for(memory_id: str):
+    """Rehydrate a stored genome from problem_memories, or None.
+
+    Postgres is the source of truth: api/memory.py persists the genome and
+    returns that row's id, so /reconstruct must read it back from there. An
+    in-process dict keyed by a locally minted uuid could never match.
+    """
+    from ai.models.problem_genome import ProblemGenome
+    from app.services import database_service
+
+    row = database_service.get_memory(memory_id) if memory_id else None
+    if row is None:
+        return None
+    return ProblemGenome(**{
+        k: row[k] for k in ("concepts", "operations", "constraints", "objective",
+                            "uncertainties", "data_structures", "algorithm_hints")
+    })
 
 
 def _genome_from(schema_genome: Genome):
@@ -33,16 +54,10 @@ def _genome_from(schema_genome: Genome):
 
 
 def extract_memory(req: MemoryRequest) -> MemoryResponse:
-    if USE_MOCK_AI:
-        return MemoryResponse(
-            memory_id="mock-memory-1",
-            memory=Genome(
-                concepts=["grid", "dynamic programming"],
-                operations=["move right", "move down"],
-                objective="minimize cost",
-                uncertainties=["obstacles"],
-            ),
-        )
+    """Transcript -> Genome. api/memory.py persists the result and sets
+    memory_id, so nothing is stored here."""
+    if USE_MOCK_AI or not GEMINI_API_KEY:
+        return MemoryResponse(memory_id=None, memory=_mock_genome())
 
     from ai.extraction.genome import extract_genome
     from ai.gemini_client import AIError
@@ -56,9 +71,7 @@ def extract_memory(req: MemoryRequest) -> MemoryResponse:
         log.warning("extraction failed: %s", exc)
         raise HTTPException(503, "We couldn't read that memory just now. Try again in a moment.")
 
-    memory_id = uuid4().hex
-    _MEMORIES[memory_id] = genome
-    return MemoryResponse(memory_id=memory_id, memory=Genome(**genome.model_dump()))
+    return MemoryResponse(memory_id=None, memory=Genome(**genome.model_dump()))
 
 
 def search_candidates(req: SearchRequest) -> SearchResponse:
@@ -119,9 +132,13 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
                 "Constraints were not in your memory and come from the original problem.",
             ],
             starter_code=(
-                "class Solution:\n"
-                "    def minPathSum(self, grid: list[list[int]]) -> int:\n"
-                "        pass\n"
+                "import sys\n\n"
+                "def main():\n"
+                "    data = sys.stdin.read().split()\n"
+                "    # your solution here\n"
+                "    print(0)\n\n"
+                'if __name__ == "__main__":\n'
+                "    main()\n"
             ),
         ))
 
@@ -138,9 +155,10 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
     if candidate is None:
         raise HTTPException(404, f"No problem with id {req.candidate_id!r}.")
 
-    # A missing genome is recoverable: reconstruct from the candidate alone
-    # rather than refusing. It only costs the memory-specific notes.
-    genome = _MEMORIES.get(req.memory_id) or ProblemGenome()
+    # Load the genome the route persisted. A miss is recoverable: reconstruct
+    # from the candidate alone rather than refusing — it only costs the
+    # memory-specific notes.
+    genome = _genome_for(req.memory_id) or ProblemGenome()
 
     problem = reconstruct_problem(genome, candidate)
     return ReconstructResponse(problem=Problem(

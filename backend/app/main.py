@@ -1,5 +1,7 @@
 """FastAPI entrypoint. Routes are thin; logic belongs in app/services."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,7 +9,18 @@ from app import errors
 from app.config import CORS_ORIGINS, GEMINI_API_KEY, USE_MOCK_AI
 from app.api import memory, search, reconstruct, verify, problems
 
-app = FastAPI(title="Recollect API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Fail at boot, not on the first request during a demo."""
+    if not USE_MOCK_AI and not GEMINI_API_KEY:
+        raise RuntimeError(
+            "USE_MOCK_AI=false but GEMINI_API_KEY is unset. Add the key to .env, "
+            "or set USE_MOCK_AI=true to run on canned responses."
+        )
+    yield
+
+
+app = FastAPI(title="Recollect API", version="0.1.0", lifespan=lifespan)
 
 # Explicit origins, never "*" — credentials are allowed.
 app.add_middleware(
@@ -19,16 +32,6 @@ app.add_middleware(
 )
 
 errors.register(app)
-
-
-@app.on_event("startup")
-def _check_config() -> None:
-    """Fail at boot, not on the first request during a demo."""
-    if not USE_MOCK_AI and not GEMINI_API_KEY:
-        raise RuntimeError(
-            "USE_MOCK_AI=false but GEMINI_API_KEY is unset. Add the key to .env, "
-            "or set USE_MOCK_AI=true to run on canned responses."
-        )
 
 
 app.include_router(memory.router)

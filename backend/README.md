@@ -101,7 +101,7 @@ See [../docs/API.md](../docs/API.md) for the full contract.
 | GET | `/health/db` | DB reachable + corpus size | live |
 | GET | `/problems` | browse corpus; `limit`/`offset`/`difficulty`/`company`/`search` | live |
 | GET | `/problems/{id}` | one problem, **by UUID or slug** | live |
-| POST | `/memory` | transcript → Genome, persisted | genome mocked, **saved for real** |
+| POST | `/memory` | transcript → Genome, persisted | **live** when a key is set, else mocked |
 | GET | `/memory/{id}` | read back a stored genome | live |
 | POST | `/search` | genome → ranked candidates | mocked |
 | POST | `/reconstruct` | memory + candidate → full problem | mocked |
@@ -167,11 +167,38 @@ rather than failing on the first request mid-demo. `.env.example` placeholders
 { "status": "ok", "mock_ai": true, "ai_ready": false }
 ```
 
+## Tests
+
+```bash
+cd backend && ../venv/bin/python -m pytest tests -q
+```
+
+25 integration tests. They need Postgres (`docker compose up -d`) but **never**
+call Gemini or Judge0 — both are monkeypatched, so the suite is fast, free and
+runs without an API key.
+
+What they cover: response shapes, every filter, pagination, UUID-or-slug lookup,
+404-not-500 on malformed ids, the seven-field genome round-trip, the real
+extraction path with Gemini stubbed, the no-key fallback, and Judge0 degrading
+instead of crashing.
+
+They earn their keep: the first run caught `ModuleNotFoundError: ai` — uvicorn
+starts from `backend/`, so `import ai.*` did not resolve. `app/__init__.py` now
+puts the repo root on `sys.path`. That would otherwise have surfaced the moment
+someone added a real key.
+
 ### Remaining backend tasks
 
-| Task | Scope |
-| --- | --- |
-| B10 | swap `ai_service` mocks for real `ai.*` calls (needs Dev 2) |
+| Task | Scope | Blocked by |
+| --- | --- | --- |
+| B10a | ~~`/memory` → `ai.extraction`~~ **done** | — |
+| B10b | `/search` → `ai.retrieval` | `embeddings.py`, `vector_search.py`, `reranker.py` are stubs |
+| B10c | `/reconstruct` → `ai.reconstruction` | `reconstruct.py` is a stub |
+| B10d | test-case generation | `ai/verification/test_generator.py` is a stub |
+
+**`/memory` is live.** Set `GEMINI_API_KEY` and `USE_MOCK_AI=false` to use it.
+With no key it falls back to the mock rather than failing, so a teammate without
+one still gets a correctly shaped response.
 
 Done: B1 connection helper · B2 schema split · B3–B4 corpus browse ·
 B5 memory persistence · B6 test cases + submissions · B7–B8 Judge0 ·
