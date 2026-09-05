@@ -9,6 +9,11 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
+## Start here
+
+**[docs/FRONTEND_ROADMAP.md](../docs/FRONTEND_ROADMAP.md)** — build order (F0–F8),
+state shape, per-screen acceptance criteria, and the provenance rendering spec.
+
 ## Working without a backend
 
 `VITE_USE_MOCK=true` (the default) makes every function in

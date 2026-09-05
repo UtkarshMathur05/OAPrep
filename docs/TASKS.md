@@ -32,6 +32,10 @@ insert format in `load_corpus.py`.
 
 ## Dev 1 — Frontend (`frontend` branch)
 
+> **Step-by-step build order, state shape and per-screen acceptance criteria:
+> [FRONTEND_ROADMAP.md](FRONTEND_ROADMAP.md).** Start there; the checklist below
+> is the summary.
+
 Set `VITE_USE_MOCK=true` and build the whole thing against
 `src/data/mockData.ts`. You need nothing else from anyone.
 

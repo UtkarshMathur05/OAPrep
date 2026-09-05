@@ -184,6 +184,10 @@ Full contract: [docs/API.md](docs/API.md). Live schema: http://localhost:8000/do
 Task-by-task breakdown, with owners and the order things unblock in:
 **[docs/TASKS.md](docs/TASKS.md)**.
 
+Per-area detail: **[docs/FRONTEND_ROADMAP.md](docs/FRONTEND_ROADMAP.md)** (Dev 1),
+**[ai/corpus/README.md](ai/corpus/README.md)** (Dev 2, Milestone 0),
+**[backend/README.md](backend/README.md)** (Dev 3).
+
 ## Git workflow
 
 Four branches, one owner each:
