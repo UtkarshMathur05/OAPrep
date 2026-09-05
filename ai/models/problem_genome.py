@@ -49,6 +49,8 @@ class ProblemCandidate(BaseModel):
 
     id: str
     title: str
+    # LeetCode URL slug: the corpus's stable key, handy for tests and logging.
+    slug: str | None = None
     confidence: float = 0.0
     description: Optional[str] = None
     platform: Optional[str] = None

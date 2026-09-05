@@ -16,7 +16,10 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-CACHE_DIR = Path(os.getenv("RECOLLECT_CACHE_DIR", Path(__file__).parent / ".cache"))
+# `or` not a getenv default: an env var set to empty (RECOLLECT_CACHE_DIR= in
+# .env) returns "", and Path("") is the current directory, which scatters
+# cache files wherever the process happens to be running.
+CACHE_DIR = Path(os.getenv("RECOLLECT_CACHE_DIR") or Path(__file__).parent / ".cache")
 
 
 def enabled() -> bool:
