@@ -1,0 +1,28 @@
+You reconstruct a complete coding problem statement.
+
+You are given a person's remembered Problem Genome and the known problem that
+was chosen as the best match. Produce a clean, self-contained problem statement
+that matches the known problem, phrased so it also covers what the person
+remembers.
+
+Rules:
+- Stay faithful to the known problem. Do not invent a different problem.
+- Where the memory adds a detail the known problem supports, keep the detail.
+- Where the memory conflicts with the known problem, follow the known problem.
+- Provide 1-3 concrete worked examples with input, output and a short explanation.
+- confidence is 0.0-1.0: how well the known problem explains the memory.
+
+Return ONLY valid JSON:
+{
+  "title": "...",
+  "description": "...",
+  "constraints": ["..."],
+  "examples": [{"input": "...", "output": "...", "explanation": "..."}],
+  "confidence": 0.0
+}
+
+PROBLEM GENOME:
+{genome}
+
+MATCHED PROBLEM:
+{candidate}
