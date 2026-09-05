@@ -26,6 +26,9 @@ export const mockSearchResponse: SearchResponse = {
     { id: '1', title: 'Minimum Path Sum', confidence: 0.91, difficulty: 'medium', reason: 'Grid with down/right moves, minimizing a sum.' },
     { id: '2', title: 'Unique Paths', confidence: 0.72, difficulty: 'medium', reason: 'Same movement rules, but counts paths instead of minimizing.' },
     { id: '3', title: 'Dungeon Game', confidence: 0.48, difficulty: 'hard', reason: 'Grid DP, but the objective is survival not cost.' },
+    { id: '1', title: 'Minimum Path Sum', confidence: 0.91, difficulty: 'medium', reason: 'Grid with down/right moves, minimizing a sum.', topics: ['Array', 'Dynamic Programming', 'Matrix'], companies: ['Amazon', 'Google'], company_count: 41 },
+    { id: '2', title: 'Unique Paths', confidence: 0.72, difficulty: 'medium', reason: 'Same movement rules, but counts paths instead of minimizing.', topics: ['Math', 'Dynamic Programming', 'Combinatorics'], companies: ['Google', 'Bloomberg'], company_count: 28 },
+    { id: '3', title: 'Dungeon Game', confidence: 0.48, difficulty: 'hard', reason: 'Grid DP, but the objective is survival not cost.', topics: ['Dynamic Programming', 'Matrix'], companies: ['Adobe', 'Amazon'], company_count: 14 },
   ],
 }
 
