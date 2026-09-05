@@ -39,3 +39,6 @@ ai/corpus/out/
 # Cached Gemini responses. Commit the golden-demo entries if you want the
 # demo to run offline on a fresh clone.
 ai/.cache/
+
+# Local Claude Code project context. Kept on disk, out of the repo.
+CLAUDE.md
