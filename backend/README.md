@@ -31,6 +31,42 @@ app/
 
 Keep routes thin — logic goes in `services/`.
 
+## Database access
+
+All queries go through [app/db/database.py](app/db/database.py). Never call
+`psycopg.connect` anywhere else.
+
+```python
+from app.db.database import query, query_one, execute, get_conn
+
+rows = query("SELECT slug, title FROM problems WHERE difficulty = %s", ("medium",))
+one  = query_one("SELECT * FROM problems WHERE slug = %s", ("two-sum",))
+new  = execute("INSERT INTO problem_memories (raw_transcript) VALUES (%s) RETURNING id", (text,))
+
+with get_conn() as conn, conn.cursor() as cur:   # multi-statement transaction
+    cur.execute(...)
+    cur.execute(...)
+```
+
+Notes:
+
+* Rows are `dict`s (`row["title"]`), so SELECT column order never matters.
+* `get_conn()` commits on clean exit and rolls back on any exception.
+* Always pass parameters as `%s` placeholders — never f-string SQL.
+* pgvector is registered per connection, so `vector` columns adapt to and from
+  Python lists. Reads come back as `pgvector.Vector`; call `.to_list()` for a
+  plain list. Cosine distance is the `<=>` operator.
+* One connection per unit of work, no pool. A local connect is ~5ms; add
+  `psycopg_pool` only if that ever shows up in a profile.
+
+`GET /health/db` reports reachability plus corpus size:
+
+```json
+{ "status": "ok", "db": "recollect", "problems": 5, "embedded": 0 }
+```
+
+It returns 503 with the driver's message when the database is down.
+
 ## Mock mode
 
 `USE_MOCK_AI=true` in `.env` makes `ai_service` and `judge_service` return canned

@@ -1,10 +1,10 @@
-"""PostgreSQL access. TODO(backend): implement with psycopg + pgvector."""
+"""PostgreSQL access.
 
-from app.config import DATABASE_URL
+Connections come from app.db.database — do not open your own here.
+TODO(backend): implement the queries (tasks B3, B5, B6).
+"""
 
-
-def get_connection():
-    raise NotImplementedError
+from app.db.database import execute, query, query_one  # noqa: F401
 
 
 def list_problems(limit: int = 20):

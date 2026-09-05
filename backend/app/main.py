@@ -1,6 +1,6 @@
 """FastAPI entrypoint. Routes are thin; logic belongs in app/services."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ORIGINS
@@ -27,3 +27,14 @@ app.include_router(problems.router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+def health_db():
+    """Confirms the database is reachable and says how much corpus is loaded."""
+    from app.db.database import healthcheck
+
+    try:
+        return {"status": "ok", **healthcheck()}
+    except Exception as exc:  # noqa: BLE001 - a probe must report, not crash
+        raise HTTPException(status_code=503, detail=f"database unavailable: {exc}")
