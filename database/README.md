@@ -57,6 +57,21 @@ docker compose exec db psql -U recollect -d recollect
 
 `DATABASE_URL=postgresql://recollect:recollect@localhost:5432/recollect`
 
+## Schema changes after first boot
+
+`init/*.sql` runs **only on an empty volume**, so editing it does nothing to a
+database that already exists. Apply the change by hand as well:
+
+```bash
+docker compose exec -T db psql -U recollect -d recollect \
+  -c "ALTER TABLE problem_memories ADD COLUMN IF NOT EXISTS ..."
+```
+
+Teammates on a fresh clone pick it up automatically; anyone with an existing
+volume needs the same ALTER (or `docker compose down -v`, which destroys data).
+Announce schema changes — they are the one thing that silently breaks another
+developer's running setup.
+
 ## No vector index — on purpose
 
 There is no `ivfflat`/`hnsw` index on `problems.embedding`. At 1,200 rows an

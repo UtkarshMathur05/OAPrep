@@ -99,10 +99,57 @@ Rebuild the full problem statement from a memory and the chosen candidate.
     "description": "...",
     "constraints": ["1 <= m, n <= 200"],
     "examples": [{ "input": "...", "output": "...", "explanation": "..." }],
-    "confidence": 0.91
+    "confidence": 0.91,
+    "provenance": {
+      "title": "retrieved",
+      "description": "retrieved",
+      "constraints": "inferred",
+      "examples": "inferred"
+    },
+    "notes": [
+      "You weren't sure about obstacles; this problem has none."
+    ],
+    "starter_code": "class Solution:\n    def minPathSum(self, grid): ..."
   }
 }
 ```
+
+### provenance
+
+Maps a field name to how that field came to be known:
+
+| Value | Meaning |
+| --- | --- |
+| `remembered` | the user said it |
+| `retrieved` | it came from the stored corpus row |
+| `inferred` | the model supplied it; the user never said it |
+
+Expected keys are the problem's own content fields — `title`, `description`,
+`constraints`, `examples`. **A missing key means the pipeline made no claim**;
+render it unlabelled rather than defaulting to a value.
+
+This is CLAUDE.md §19 made machine-readable, and it is the difference between
+reconstruction and "printing the stored description". Screen 4 should make the
+three levels visually distinct — an inferred constraint must never look like
+something the user remembered.
+
+*Known limitation:* the map is keyed by field, so it cannot say that
+`constraints[0]` is remembered while `constraints[1]` is inferred. Per-item
+provenance would need `Dict[str, List[Provenance]]`. Fine for the MVP; worth
+revisiting only if the demo needs it.
+
+### notes
+
+Free-text caveats for the reconstruction screen — conflicts between the memory
+and the matched problem, details that were filled in, things left uncertain.
+
+### starter_code
+
+Seeds the Monaco buffer on the Practice screen. Python only (§9). `null` when
+the pipeline produced none; the editor should fall back to an empty buffer.
+
+All three fields are **additive and default to empty**, so a client that ignores
+them still works.
 
 ---
 

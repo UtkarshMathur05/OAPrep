@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -48,6 +48,11 @@ class ProblemCandidate(BaseModel):
     reason: Optional[str] = None
 
 
+# How a given part of the reconstruction came to be known. Mirrors
+# backend/app/schemas/reconstruct.py — keep the two in sync.
+Provenance = Literal["remembered", "retrieved", "inferred"]
+
+
 class ReconstructedProblem(BaseModel):
     """A full problem statement rebuilt from a candidate + the user's memory."""
 
@@ -56,6 +61,11 @@ class ReconstructedProblem(BaseModel):
     constraints: List[str] = Field(default_factory=list)
     examples: List[dict] = Field(default_factory=list)
     confidence: float = 0.0
+    # Field name -> provenance, for "title" / "description" / "constraints" /
+    # "examples". §19: never let an inference read as a remembered fact.
+    provenance: Dict[str, Provenance] = Field(default_factory=dict)
+    notes: List[str] = Field(default_factory=list)
+    starter_code: Optional[str] = None
 
 
 class TestCase(BaseModel):

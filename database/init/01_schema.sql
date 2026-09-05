@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS problem_memories (
     constraints    TEXT[] NOT NULL DEFAULT '{}',
     objective      TEXT,
     uncertainties  TEXT[] NOT NULL DEFAULT '{}',
+    -- The Genome carries these too; without columns they were silently dropped
+    -- on save, and /reconstruct reloads the memory to prompt Gemini.
+    data_structures TEXT[] NOT NULL DEFAULT '{}',
+    algorithm_hints TEXT[] NOT NULL DEFAULT '{}',
     raw_transcript TEXT NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );

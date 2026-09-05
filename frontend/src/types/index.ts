@@ -53,6 +53,12 @@ export interface Example {
   output: string
   explanation?: string | null
 }
+/**
+ * How a part of the reconstructed problem came to be known.
+ * CLAUDE.md §19 — an inference must never be rendered as a remembered fact.
+ */
+export type Provenance = 'remembered' | 'retrieved' | 'inferred'
+
 export interface Problem {
   id?: string | null
   title: string
@@ -60,6 +66,16 @@ export interface Problem {
   constraints: string[]
   examples: Example[]
   confidence: number
+  /**
+   * Field name -> provenance. Expected keys: 'title', 'description',
+   * 'constraints', 'examples'. A missing key means the pipeline made no
+   * claim — render it unlabelled rather than assuming.
+   */
+  provenance: Partial<Record<string, Provenance>>
+  /** Caveats for Screen 4, e.g. conflicts between memory and matched problem. */
+  notes: string[]
+  /** Seeds the Monaco buffer. Python only. */
+  starter_code?: string | null
 }
 export interface ReconstructResponse {
   problem: Problem

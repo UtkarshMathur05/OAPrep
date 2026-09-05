@@ -113,8 +113,45 @@ def _as_uuid(value: str):
 # --------------------------------------------------------------------- memories
 
 def save_memory(genome, raw_transcript: str) -> str:
-    """Persist an extracted genome. TODO(backend): task B5."""
-    raise NotImplementedError
+    """Persist an extracted genome; returns the new memory id.
+
+    `genome` is a schemas.memory.Genome. Its list fields map straight onto
+    TEXT[] columns — psycopg adapts Python lists natively, no serialisation.
+    """
+    row = execute(
+        """
+        INSERT INTO problem_memories
+            (raw_transcript, concepts, operations, constraints, objective,
+             uncertainties, data_structures, algorithm_hints)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id::text AS id
+        """,
+        (
+            raw_transcript,
+            genome.concepts,
+            genome.operations,
+            genome.constraints,
+            genome.objective,
+            genome.uncertainties,
+            genome.data_structures,
+            genome.algorithm_hints,
+        ),
+    )
+    return row["id"]
+
+
+def get_memory(memory_id: str) -> Optional[dict]:
+    """Load a stored genome. /reconstruct needs this to rebuild from memory."""
+    return query_one(
+        """
+        SELECT id::text AS id, raw_transcript, concepts, operations,
+               constraints, objective, uncertainties,
+               data_structures, algorithm_hints, problem_id::text AS problem_id
+        FROM problem_memories
+        WHERE id = %s
+        """,
+        (_as_uuid(memory_id),),
+    )
 
 
 # -------------------------------------------------------------------- test data

@@ -59,6 +59,17 @@ Notes:
 * One connection per unit of work, no pool. A local connect is ~5ms; add
   `psycopg_pool` only if that ever shows up in a profile.
 
+Gotchas worth knowing:
+
+* `save_memory` writes all **seven** Genome fields. `data_structures` and
+  `algorithm_hints` were added to `problem_memories` after the initial schema —
+  if your `POST /memory` silently drops them, your volume predates that change;
+  see [../database/README.md](../database/README.md#schema-changes-after-first-boot).
+* `get_problem` accepts a UUID **or** a slug. Two separate SQL placeholders are
+  used on purpose: reusing one makes Postgres infer `uuid` from the first use,
+  and `slug = $1` then fails with `operator does not exist: text = uuid`.
+* Filters build parameterised `WHERE` fragments. Never f-string SQL.
+
 `GET /health/db` reports reachability plus corpus size:
 
 ```json
@@ -73,16 +84,43 @@ It returns 503 with the driver's message when the database is down.
 responses, so every endpoint answers with a correctly shaped payload before the
 AI modules and Judge0 are wired up. Flip it to `false` as each service lands.
 
+It only covers the **AI and Judge0** calls — the database layer is always real.
+So `POST /memory` returns a mocked genome but persists it and hands back a
+genuine UUID, and `/problems` is live against Postgres regardless of the flag.
+
 ## Endpoints
 
 See [../docs/API.md](../docs/API.md) for the full contract.
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| POST | `/memory` | transcript → Problem Genome |
-| POST | `/search` | genome → ranked candidates |
-| POST | `/reconstruct` | memory + candidate → full problem |
-| POST | `/verify` | code + language → Judge0 results |
-| GET | `/problems` | list corpus problems |
-| GET | `/problems/{id}` | one problem |
-| GET | `/health` | liveness |
+**Status** says what the endpoint actually does right now — `live` is real,
+`mocked` returns canned data of the correct shape.
+
+| Method | Path | Purpose | Status |
+| --- | --- | --- | --- |
+| GET | `/health` | liveness | live |
+| GET | `/health/db` | DB reachable + corpus size | live |
+| GET | `/problems` | browse corpus; `limit`/`offset`/`difficulty`/`company`/`search` | live |
+| GET | `/problems/{id}` | one problem, **by UUID or slug** | live |
+| POST | `/memory` | transcript → Genome, persisted | genome mocked, **saved for real** |
+| GET | `/memory/{id}` | read back a stored genome | live |
+| POST | `/search` | genome → ranked candidates | mocked |
+| POST | `/reconstruct` | memory + candidate → full problem | mocked |
+| POST | `/verify` | code → Judge0 results | mocked |
+
+`/problems` returns `{total, limit, offset, problems[]}` — `total` is the count
+matching the filters, not the page size. `companies` on each row is sliced to 5
+for display; `company_count` is the true total.
+
+`/problems/{id}` uses **`ProblemSummary`/`ProblemDetail`, not the `Problem`
+shape from `/reconstruct`**. A corpus row is stored text; a reconstructed
+problem also carries `constraints`, `examples`, `confidence` and `provenance`,
+which Gemini produces at reconstruct time and which are not columns.
+
+### Remaining backend tasks
+
+| Task | Scope |
+| --- | --- |
+| B6 | `get_test_cases`, `save_submission` |
+| B7–B8 | Judge0: one submission, then batch + aggregate |
+| B9 | error handling — no bare 500s (§20) |
+| B10 | swap `ai_service` mocks for real `ai.*` calls (needs Dev 2) |

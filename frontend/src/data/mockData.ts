@@ -42,6 +42,20 @@ export const mockReconstructResponse: ReconstructResponse = {
       { input: '[[1,3,1],[1,5,1],[4,2,1]]', output: '7', explanation: 'The path 1 → 3 → 1 → 1 → 1 has the minimum sum.' },
     ],
     confidence: 0.91,
+    provenance: {
+      title: 'retrieved',
+      description: 'retrieved',
+      constraints: 'inferred',
+      examples: 'inferred',
+    },
+    notes: [
+      "You weren't sure about obstacles; this problem has none.",
+      'Constraints were not in your memory and come from the original problem.',
+    ],
+    starter_code:
+      'class Solution:\n' +
+      '    def minPathSum(self, grid: list[list[int]]) -> int:\n' +
+      '        pass\n',
   },
 }
 
@@ -114,6 +128,7 @@ export const mockProblemDetail: ProblemDetail = {
   test_case_count: 5,
 }
 
+/** @deprecated Use mockReconstructResponse.problem.starter_code instead. */
 export const mockStarterCode = `class Solution:
     def minPathSum(self, grid: list[list[int]]) -> int:
         pass

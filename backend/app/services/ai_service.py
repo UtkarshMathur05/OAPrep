@@ -44,5 +44,20 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
                         "the path. You may only move down or right.",
             constraints=["1 <= m, n <= 200", "0 <= grid[i][j] <= 200"],
             confidence=0.91,
+            provenance={
+                "title": "retrieved",
+                "description": "retrieved",
+                "constraints": "inferred",
+                "examples": "inferred",
+            },
+            notes=[
+                "You weren't sure about obstacles; this problem has none.",
+                "Constraints were not in your memory and come from the original problem.",
+            ],
+            starter_code=(
+                "class Solution:\n"
+                "    def minPathSum(self, grid: list[list[int]]) -> int:\n"
+                "        pass\n"
+            ),
         ))
     raise NotImplementedError
