@@ -1,0 +1,42 @@
+ID,URL,Title,Difficulty,Acceptance %,Frequency %
+56,https://leetcode.com/problems/merge-intervals,Merge Intervals,Medium,52.3%,62.5%
+146,https://leetcode.com/problems/lru-cache,LRU Cache,Medium,47.6%,100.0%
+200,https://leetcode.com/problems/number-of-islands,Number of Islands,Medium,64.7%,87.5%
+207,https://leetcode.com/problems/course-schedule,Course Schedule,Medium,51.8%,62.5%
+215,https://leetcode.com/problems/kth-largest-element-in-an-array,Kth Largest Element in an Array,Medium,69.1%,50.0%
+253,https://leetcode.com/problems/meeting-rooms-ii,Meeting Rooms II,Medium,52.7%,62.5%
+394,https://leetcode.com/problems/decode-string,Decode String,Medium,62.9%,50.0%
+560,https://leetcode.com/problems/subarray-sum-equals-k,Subarray Sum Equals K,Medium,47.7%,50.0%
+68,https://leetcode.com/problems/text-justification,Text Justification,Hard,51.5%,50.0%
+33,https://leetcode.com/problems/search-in-rotated-sorted-array,Search in Rotated Sorted Array,Medium,45.2%,50.0%
+297,https://leetcode.com/problems/serialize-and-deserialize-binary-tree,Serialize and Deserialize Binary Tree,Hard,61.1%,50.0%
+79,https://leetcode.com/problems/word-search,Word Search,Medium,47.7%,50.0%
+32,https://leetcode.com/problems/longest-valid-parentheses,Longest Valid Parentheses,Hard,39.1%,50.0%
+845,https://leetcode.com/problems/longest-mountain-in-array,Longest Mountain in Array,Medium,42.3%,62.5%
+55,https://leetcode.com/problems/jump-game,Jump Game,Medium,41.2%,50.0%
+121,https://leetcode.com/problems/best-time-to-buy-and-sell-stock,Best Time to Buy and Sell Stock,Easy,57.0%,50.0%
+54,https://leetcode.com/problems/spiral-matrix,Spiral Matrix,Medium,57.2%,50.0%
+1041,https://leetcode.com/problems/robot-bounded-in-circle,Robot Bounded In Circle,Medium,56.6%,50.0%
+78,https://leetcode.com/problems/subsets,Subsets,Medium,82.5%,62.5%
+1352,https://leetcode.com/problems/product-of-the-last-k-numbers,Product of the Last K Numbers,Medium,63.0%,50.0%
+189,https://leetcode.com/problems/rotate-array,Rotate Array,Medium,45.2%,50.0%
+224,https://leetcode.com/problems/basic-calculator,Basic Calculator,Hard,47.0%,50.0%
+787,https://leetcode.com/problems/cheapest-flights-within-k-stops,Cheapest Flights Within K Stops,Medium,42.2%,62.5%
+185,https://leetcode.com/problems/department-top-three-salaries,Department Top Three Salaries,Hard,61.0%,50.0%
+706,https://leetcode.com/problems/design-hashmap,Design HashMap,Easy,66.7%,50.0%
+438,https://leetcode.com/problems/find-all-anagrams-in-a-string,Find All Anagrams in a String,Medium,54.1%,50.0%
+886,https://leetcode.com/problems/possible-bipartition,Possible Bipartition,Medium,52.8%,62.5%
+904,https://leetcode.com/problems/fruit-into-baskets,Fruit Into Baskets,Medium,51.7%,50.0%
+347,https://leetcode.com/problems/top-k-frequent-elements,Top K Frequent Elements,Medium,66.8%,50.0%
+428,https://leetcode.com/problems/serialize-and-deserialize-n-ary-tree,Serialize and Deserialize N-ary Tree,Hard,68.9%,50.0%
+134,https://leetcode.com/problems/gas-station,Gas Station,Medium,48.3%,62.5%
+432,https://leetcode.com/problems/all-oone-data-structure,All O`one Data Structure,Hard,44.4%,62.5%
+43,https://leetcode.com/problems/multiply-strings,Multiply Strings,Medium,44.4%,50.0%
+34,https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array,Find First and Last Position of Element in Sorted Array,Medium,49.3%,50.0%
+124,https://leetcode.com/problems/binary-tree-maximum-path-sum,Binary Tree Maximum Path Sum,Hard,42.5%,50.0%
+437,https://leetcode.com/problems/path-sum-iii,Path Sum III,Medium,46.5%,62.5%
+694,https://leetcode.com/problems/number-of-distinct-islands,Number of Distinct Islands,Medium,62.9%,50.0%
+25,https://leetcode.com/problems/reverse-nodes-in-k-group,Reverse Nodes in k-Group,Hard,66.6%,50.0%
+1248,https://leetcode.com/problems/count-number-of-nice-subarrays,Count Number of Nice Subarrays,Medium,75.4%,62.5%
+1043,https://leetcode.com/problems/partition-array-for-maximum-sum,Partition Array for Maximum Sum,Medium,77.5%,62.5%
+974,https://leetcode.com/problems/subarray-sums-divisible-by-k,Subarray Sums Divisible by K,Medium,56.5%,50.0%
