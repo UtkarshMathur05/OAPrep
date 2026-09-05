@@ -35,7 +35,7 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | --- | --- | --- |
 | Frontend | React, TypeScript, Vite, Tailwind v3, Monaco, Axios | Single-page stepper; Web Speech API for voice |
 | Backend | Python, FastAPI, Pydantic, Uvicorn | Sync endpoints, raw SQL via `psycopg` — no ORM |
-| AI / RAG | Gemini 2.5 Flash + `gemini-embedding-001` | Native `response_schema` output; disk-cached |
+| AI / RAG | Gemini 3.1 Flash Lite + `gemini-embedding-001` | Native `response_schema` output; disk-cached |
 | Database | PostgreSQL 16 + pgvector (Docker) | Exact vector scan, no ANN index |
 | Execution | Judge0 API | Python only, batch endpoint, 5 test cases |
 
@@ -64,7 +64,7 @@ Full rationale and the fallback ladder: [CLAUDE.md §28](CLAUDE.md).
 ## Folder structure
 
 ```
-recollect/
+memoize/
 ├── frontend/          React app — UI only, talks to the backend over HTTP
 ├── backend/           FastAPI — REST API, orchestrates AI, DB and Judge0
 ├── ai/                Gemini pipeline — extraction, retrieval, reconstruction
@@ -240,3 +240,102 @@ not want to debug at hour 30. Keep the mock path working.
 36-hour hackathon MVP. No auth, no microservices, no Kubernetes, no ORM, no
 migrations, no vector index, no deployment, no custom sandbox. Working
 end-to-end flow beats architectural polish.
+
+---
+
+## Running it
+
+Three processes, in this order. Each block is a separate terminal; the database
+one exits immediately, so two terminals stay open.
+
+```bash
+# 1. Database — detached, stays up across restarts
+docker compose up -d
+docker compose logs -f db          # first boot only: watch the init scripts land
+
+# 2. Backend + AI — one venv covers both
+source venv/bin/activate
+cd backend && uvicorn app.main:app --reload --port 8000
+
+# 3. Frontend
+cd frontend && npm run dev
+```
+
+| Service | URL |
+| --- | --- |
+| App | http://localhost:5173 |
+| API docs (live schema) | http://localhost:8000/docs |
+| Health | http://localhost:8000/health |
+| Postgres | `localhost:5432`, db/user/password `recollect` |
+
+### Check it before demoing
+
+Two probes, and between them they tell you which layers are actually live.
+
+```bash
+curl -s localhost:8000/health    | python -m json.tool
+curl -s localhost:8000/health/db | python -m json.tool
+```
+
+```json
+{ "status": "ok", "mock_ai": false, "ai_ready": true }
+{ "status": "ok", "db": "recollect", "problems": 1124, "embedded": 1124 }
+```
+
+`ai_ready: false` means `GEMINI_API_KEY` is missing or still the placeholder from
+`.env.example`. This is worth checking explicitly: the backend degrades to canned
+responses rather than erroring, so a dead key looks like a working demo until
+someone reads the output. `mock_ai: true` is the same story, deliberately.
+
+`embedded` is the number that decides whether retrieval works at all. If it is 0
+while `problems` is not, the corpus loaded but never got embeddings, and every
+search will return noise. `/health/db` returns 503 if Docker isn't up.
+
+Then walk one problem end to end — recall, genome, candidates, reconstruct, run.
+The first `/verify` on a problem is slower: it has no test cases yet and stops to
+generate them (see below).
+
+### Test cases
+
+A problem gets its test cases from one of two places, and neither needs a
+manual step:
+
+1. **Reconstruction examples.** `/reconstruct` stores the examples it produced.
+   Free — no extra model call — and guaranteed to match what's on screen.
+2. **Generated on first verify.** If a problem still has none, `/verify` asks the
+   model for a reference solution plus candidate cases, executes that solution on
+   Judge0, and keeps only the cases whose real output matches the claimed one.
+   Wrong cases are dropped rather than stored.
+
+Both write to `test_cases`, so this happens once per problem. A second run on the
+same problem reuses the stored rows. Details and the measured evidence:
+[backend/README.md](backend/README.md).
+
+### Running the tests
+
+```bash
+source venv/bin/activate
+cd backend && pytest -q          # 25 tests, no network, no database required
+```
+
+### Stopping
+
+```bash
+# Ctrl-C the uvicorn and vite terminals, then:
+docker compose down              # keeps the pgdata volume
+docker compose down -v           # wipes it — next `up` re-runs database/init/*.sql
+```
+
+`down -v` is how you reload a changed schema or a new `03_corpus.sql`: the init
+scripts run **only on an empty volume**, so editing them without `-v` does
+nothing.
+
+### When something is wrong
+
+| Symptom | Cause |
+| --- | --- |
+| Candidates are empty or nonsense | Corpus not embedded — check `embedded` on `/health/db` |
+| `ModuleNotFoundError: ai` | Backend started from the repo root; run uvicorn from `backend/` |
+| Port 8000 in use | An orphaned uvicorn — `ss -ltnp \| grep 8000`, then kill by PID |
+| Schema edits have no effect | Init scripts only run on an empty volume; `docker compose down -v` |
+| Everything 502s on verify | Judge0 CE is down. `USE_MOCK_AI=true` keeps the flow demoable |

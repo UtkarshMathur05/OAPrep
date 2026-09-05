@@ -74,6 +74,33 @@ def run_submission(req: VerifyRequest, test_cases: list[dict]) -> VerifyResponse
     return _aggregate(cases, outputs)
 
 
+def run_reference(code: str, inputs: list[str]) -> list[str | None]:
+    """Execute `code` against each stdin and return its stdout, or None.
+
+    Used to validate generated test cases: a case is only trustworthy if the
+    reference solution actually prints the answer that was claimed for it.
+    None means the run failed (compile error, crash, timeout) and the case
+    cannot be confirmed.
+    """
+    if not code.strip() or not inputs:
+        return [None] * len(inputs)
+
+    submissions = [
+        {"language_id": LANGUAGE_IDS["python"], "source_code": code, "stdin": stdin}
+        for stdin in inputs
+    ]
+    try:
+        rows = _run_batch(submissions)
+    except httpx.HTTPError:
+        return [None] * len(inputs)
+
+    out: list[str | None] = []
+    for row in rows:
+        status = (row.get("status") or {}).get("description")
+        out.append(_normalise(row.get("stdout")) if status == "Accepted" else None)
+    return out
+
+
 def _run_batch(submissions: list[dict]) -> list[dict]:
     """Submit all cases in one request, then poll until every one has settled."""
     with httpx.Client(timeout=JUDGE0_TIMEOUT_SECONDS, headers=_headers()) as client:

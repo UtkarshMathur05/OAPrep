@@ -144,6 +144,38 @@ Notes from the live API, worth knowing before you change anything:
 * Python only (`LANGUAGE_IDS`). Other languages return a message, not an error.
 * Network failure degrades to a `Judge0 unavailable: ...` status, never a 500.
 
+## Test cases
+
+Two sources, in order of trust.
+
+**1. Reconstruction examples (primary).** `/reconstruct` stores its own examples
+as test cases. They are already stdin/stdout, already shown to the user, and
+cost **no extra model request** — the reconstruction prompt pins the format, so
+they cannot drift from what is on screen.
+
+**2. Cold generation (fallback).** When `/verify` finds a problem with no cases
+— one the user never reconstructed — it generates them, then **validates them by
+execution**:
+
+```
+generate_suite()  -> reference_solution + N candidate cases
+judge_service.run_reference(solution, inputs)  -> what the code actually prints
+keep only cases where actual == claimed        -> store those
+```
+
+Asking for answers alone does not work. Measured on `two-sum`, one case put the
+target first, another put it last, and a third was wrong under either reading —
+a correct solution would have failed whichever convention it picked. Requiring a
+reference solution fixes the format (the model has to write a parser) and
+running it catches the arithmetic: 4 of 5 cases kept, the wrong one dropped.
+
+Generation happens **once per problem ever** — `save_test_cases` is idempotent on
+`(problem_id, input)`, and the next visit reads the rows back.
+
+If every case fails validation the endpoint reports `No test cases for this
+problem` rather than storing something untrustworthy. A wrong expected output is
+worse than none: it tells someone their correct solution is broken.
+
 ## Error handling
 
 Handlers live in [app/errors.py](app/errors.py), registered most-specific-first.

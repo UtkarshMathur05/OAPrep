@@ -184,6 +184,36 @@ def resolve_problem_id(problem_id: str) -> Optional[str]:
     return row["id"] if row else None
 
 
+def save_test_cases(problem_id: str, cases) -> int:
+    """Persist generated cases. Returns how many were newly stored.
+
+    Idempotent on (problem_id, input): generation runs once per problem ever,
+    and a second visit reads from Postgres instead of spending a request.
+    """
+    canonical = resolve_problem_id(problem_id)
+    if canonical is None or not cases:
+        return 0
+
+    stored = 0
+    for case in cases:
+        row = execute(
+            """
+            INSERT INTO test_cases (problem_id, input, expected_output)
+            SELECT %(pid)s, %(input)s, %(expected)s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM test_cases
+                WHERE problem_id = %(pid)s AND input = %(input)s
+            )
+            RETURNING id::text AS id
+            """,
+            {"pid": canonical,
+             "input": (case.input or "").rstrip(),
+             "expected": (case.expected_output or "").rstrip()},
+        )
+        stored += row is not None
+    return stored
+
+
 def save_submission(problem_id: str, code: str, language: str, result) -> Optional[str]:
     """Record a run. `result` is a schemas.verify.VerifyResponse.
 

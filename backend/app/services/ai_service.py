@@ -15,6 +15,7 @@ from app.config import GEMINI_API_KEY, USE_MOCK_AI
 from app.schemas.memory import Genome, MemoryRequest, MemoryResponse
 from app.schemas.reconstruct import Problem, ReconstructRequest, ReconstructResponse
 from app.schemas.search import Candidate, SearchRequest, SearchResponse
+from app.services import database_service
 
 log = logging.getLogger(__name__)
 
@@ -181,6 +182,17 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
     genome = _genome_for(req.memory_id) or ProblemGenome()
 
     problem = reconstruct_problem(genome, candidate)
+
+    # The reconstruction's examples are already stdin/stdout pairs, so they are
+    # test cases. Storing them costs nothing and means Run tests works for any
+    # problem the user actually reached, without a second model call.
+    try:
+        from ai.verification.test_generator import cases_from_examples
+
+        database_service.save_test_cases(candidate.id, cases_from_examples(problem))
+    except Exception as exc:  # noqa: BLE001 - never fail a reconstruction over this
+        log.warning("could not store examples as test cases: %s", exc)
+
     return ReconstructResponse(problem=Problem(
         id=candidate.id,
         title=problem.title,
