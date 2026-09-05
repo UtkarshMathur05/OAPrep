@@ -18,6 +18,26 @@ from app.schemas.search import Candidate, SearchRequest, SearchResponse
 
 log = logging.getLogger(__name__)
 
+# Judge0 runs a script over stdin/stdout (§9), so a blank editor is a worse
+# starting point than a skeleton that already reads input the right way. Used
+# whenever the model returns no starter_code, which it currently never does —
+# the reconstruction prompt does not ask for one.
+_STARTER_PY = """import sys
+
+def solve(data):
+    # data is the whitespace-split stdin, as strings.
+    # TODO: your solution here
+    return 0
+
+def main():
+    data = sys.stdin.read().split()
+    print(solve(data))
+
+if __name__ == "__main__":
+    main()
+"""
+
+
 def _mock_genome() -> Genome:
     """Canned genome for mock mode and for a teammate with no API key."""
     return Genome(
@@ -166,9 +186,13 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
         title=problem.title,
         description=problem.description,
         constraints=problem.constraints,
-        examples=problem.examples,
+        # The ai models use WorkedExample / ProblemProvenance rather than the
+        # dicts this schema takes: Gemini rejects `additionalProperties` in a
+        # response schema, so a free-form Dict[str, Provenance] cannot be used
+        # there. They serialise identically, so convert at the boundary.
+        examples=[e.model_dump() for e in problem.examples],
         confidence=round(problem.confidence or candidate.confidence, 3),
-        provenance=problem.provenance,
+        provenance=problem.provenance.model_dump(),
         notes=problem.notes,
-        starter_code=problem.starter_code,
+        starter_code=problem.starter_code or _STARTER_PY,
     ))

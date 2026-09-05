@@ -109,100 +109,108 @@ export default function Reconstruct() {
   const currentStepIndex = STEPS.findIndex(s => s.id === state.step)
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-12">
-      {/* Stepper */}
-      <nav className="mb-12">
-        <ul className="flex items-center gap-4">
+    <div className="mx-auto grid max-w-6xl gap-8 px-5 py-8 lg:grid-cols-[13rem_1fr]">
+      {/* Step rail. The flow really is a sequence, so it is numbered. */}
+      <nav aria-label="Progress" className="lg:sticky lg:top-16 lg:self-start">
+        <ol className="flex gap-4 lg:block lg:space-y-0">
           {STEPS.map((stepItem, idx) => {
             const isActive = idx === currentStepIndex
             const isPast = idx < currentStepIndex
             return (
-              <li key={stepItem.id} className="flex items-center gap-4">
-                <div className={`flex items-center gap-2 text-sm font-medium transition-colors ${isActive ? 'text-brownRed' : isPast ? 'text-prussianBlue' : 'text-shadowGrey/40'}`}>
-                  <span className={`w-6 h-6 flex items-center justify-center border-2 rounded-sm ${isActive ? 'border-brownRed bg-brownRed/10' : isPast ? 'border-prussianBlue bg-prussianBlue text-floralWhite' : 'border-shadowGrey/30'}`}>
-                    {isPast ? '✓' : idx + 1}
-                  </span>
-                  {stepItem.label}
-                </div>
-                {idx < STEPS.length - 1 && (
-                  <div className={`w-8 h-[2px] ${isPast ? 'bg-prussianBlue' : 'bg-shadowGrey/20'}`} />
-                )}
+              <li
+                key={stepItem.id}
+                aria-current={isActive ? 'step' : undefined}
+                className={`flex items-baseline gap-2.5 border-l-2 py-1.5 pl-3 transition-colors
+                  ${isActive ? 'border-brownRed text-prussianBlue'
+                    : isPast ? 'border-ruleStrong text-shadowGrey'
+                    : 'border-rule text-muted'}`}
+              >
+                <span className="font-mono text-2xs tabular-nums">{idx + 1}</span>
+                <span className={`text-sm ${isActive ? 'font-medium' : ''}`}>{stepItem.label}</span>
               </li>
             )
           })}
-        </ul>
+        </ol>
       </nav>
 
-      {/* Error */}
-      {state.error && (
-        <div className="mb-8 p-4 border-l-4 border-brownRed bg-brownRed/10 text-brownRed font-medium">
-          {state.error}
-        </div>
-      )}
+      <main className="min-w-0">
+        {state.error && (
+          <div role="alert" className="mb-6 border border-brownRed/30 border-l-2 border-l-brownRed bg-brownRed/5 px-4 py-3">
+            <p className="text-sm text-brownRed">{state.error}</p>
+          </div>
+        )}
 
-      {/* Content */}
-      <div className="min-h-[400px]">
         {state.step === 'input' && (
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold tracking-tight mb-4 text-prussianBlue">What do you remember?</h2>
-            <p className="text-shadowGrey mb-8 text-lg">Describe any fragments of the coding problem you recall. Mention constraints, data structures, or even just the premise.</p>
+          <div className="max-w-reading">
+            <h2 className="mb-3 text-3xl font-semibold tracking-tight">What do you remember?</h2>
+            <p className="mb-6 text-shadowGrey">
+              Anything counts — the shape of the input, what you had to return, a
+              constraint that stuck. Say what you are unsure about too; it is kept
+              separate rather than used to narrow the search.
+            </p>
             <VoiceRecorder onSubmit={handleInputSubmit} loading={state.loading} />
           </div>
         )}
 
         {state.step === 'memory' && state.memory && (
           <div className="max-w-3xl">
-            <h2 className="text-2xl font-bold mb-6">Memory Analysis</h2>
+            <h2 className="mb-1 text-2xl font-semibold tracking-tight">Here is what came through</h2>
+            <p className="mb-5 text-shadowGrey">Check it before we search 1,124 problems.</p>
             <MemoryCard memory={state.memory} />
-            <div className="mt-8 flex justify-end">
+            <div className="mt-5 flex justify-end">
               <button
-                className="bg-prussianBlue text-floralWhite px-6 py-3 font-semibold disabled:opacity-50 hover:bg-shadowGrey transition-colors"
+                className="bg-prussianBlue px-5 py-2.5 font-medium text-floralWhite transition-colors
+                           hover:bg-shadowGrey disabled:opacity-50
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brownRed"
                 onClick={handleSearchCandidates}
                 disabled={state.loading}
               >
-                {state.loading ? 'Searching...' : 'Find Matches →'}
+                {state.loading ? 'Searching…' : 'Find matches'}
               </button>
             </div>
           </div>
         )}
 
         {state.step === 'candidates' && (
-          <div className="max-w-3xl">
-            <h2 className="text-2xl font-bold mb-2">Matching Candidates</h2>
-            <p className="text-shadowGrey mb-8">We found these problems based on your memory. Select the one that seems correct.</p>
-            {state.loading ? (
-              <div className="text-shadowGrey font-medium animate-pulse">Loading candidates...</div>
-            ) : (
-              <CandidateList candidates={state.candidates} onSelect={handleSelectCandidate} />
-            )}
+          <div>
+            <h2 className="mb-1 text-2xl font-semibold tracking-tight">Closest matches</h2>
+            <p className="mb-5 text-shadowGrey">
+              Ranked by how well each explains what you remember. Pick the one that clicks.
+            </p>
+            {state.loading
+              ? <p className="border border-rule bg-surface p-6 text-muted">Searching the corpus…</p>
+              : <CandidateList candidates={state.candidates} onSelect={handleSelectCandidate} />}
           </div>
         )}
 
         {state.step === 'problem' && state.problem && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div>
-              <ProblemDisplay problem={state.problem} />
-            </div>
-            <div className="flex flex-col gap-6">
-              <div className="border border-shadowGrey/20 bg-white">
-                <div className="bg-prussianBlue text-floralWhite px-4 py-2 text-sm font-medium flex justify-between items-center">
-                  <span>solution.py</span>
-                  <button 
-                    onClick={handleVerify} 
+          <div className="grid gap-6 xl:grid-cols-2">
+            <ProblemDisplay problem={state.problem} />
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="border border-ruleStrong bg-surface">
+                <div className="flex items-center justify-between border-b border-ruleStrong px-4 py-2">
+                  <span className="font-mono text-sm text-muted">solution.py</span>
+                  <button
+                    onClick={handleVerify}
                     disabled={state.loading}
-                    className="bg-amberEarth text-prussianBlue px-3 py-1 text-xs font-bold uppercase tracking-wider hover:bg-amberEarth/90 disabled:opacity-50"
+                    className="border border-prussianBlue px-3 py-1 text-sm font-medium transition-colors
+                               hover:bg-prussianBlue hover:text-floralWhite disabled:opacity-50
+                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brownRed"
                   >
-                    {state.loading ? 'Running...' : 'Run Tests'}
+                    {state.loading ? 'Running…' : 'Run tests'}
                   </button>
                 </div>
-                <CodeEditor value={state.code} language="python" onChange={v => setState(s => ({ ...s, code: v }))} />
+                <CodeEditor
+                  value={state.code}
+                  language="python"
+                  onChange={v => setState(s => ({ ...s, code: v }))}
+                />
               </div>
               {state.result && <TestResults result={state.result} />}
             </div>
           </div>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }
-

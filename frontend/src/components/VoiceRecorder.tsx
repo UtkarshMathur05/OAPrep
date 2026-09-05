@@ -48,38 +48,42 @@ export default function VoiceRecorder({ onSubmit, loading }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="relative border-2 border-prussianBlue bg-white">
+    <div className="space-y-4">
+      <div className="border border-ruleStrong bg-surface focus-within:border-prussianBlue">
         <textarea
-          className="w-full p-6 min-h-[200px] resize-none outline-none text-prussianBlue bg-transparent text-lg"
-          placeholder="e.g. I remember a problem about a grid where you had to move right or down..."
+          className="min-h-[11rem] w-full resize-none bg-transparent p-4 outline-none
+                     placeholder:text-muted"
+          placeholder="There was a grid, you could only move right or down, and you had to make some total as small as possible. I think there were obstacles?"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
         {SR && (
-          <div className="absolute bottom-4 right-4">
+          <div className="flex justify-end border-t border-rule px-3 py-2">
             <button
+              type="button"
               onClick={toggleRecording}
-              className={`px-4 py-2 text-sm font-bold tracking-wide uppercase border-2 transition-colors ${
-                isRecording 
-                  ? 'border-brownRed bg-brownRed text-floralWhite animate-pulse' 
-                  : 'border-prussianBlue text-prussianBlue hover:bg-prussianBlue/5'
-              }`}
+              aria-pressed={isRecording}
+              className={`flex items-center gap-2 px-2.5 py-1 text-sm transition-colors
+                focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brownRed
+                ${isRecording ? 'text-brownRed' : 'text-muted hover:text-prussianBlue'}`}
             >
-              {isRecording ? 'Listening...' : 'Dictate'}
+              <span className={`inline-block h-2 w-2 rounded-full ${
+                isRecording ? 'animate-pulse bg-brownRed' : 'bg-ruleStrong'}`} />
+              {isRecording ? 'Listening — tap to stop' : 'Speak instead'}
             </button>
           </div>
         )}
       </div>
-      
+
       <button
-        className="bg-brownRed text-floralWhite px-8 py-4 font-bold uppercase tracking-widest disabled:opacity-50 hover:bg-[#8A2520] transition-colors"
+        className="bg-brownRed px-5 py-2.5 font-medium text-floralWhite transition-colors
+                   hover:bg-[#8A2520] disabled:opacity-40
+                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-prussianBlue"
         disabled={loading || !text.trim()}
         onClick={() => onSubmit(text)}
       >
-        {loading ? 'Processing...' : 'Analyze Memory'}
+        {loading ? 'Reading your memory…' : 'Recall this problem'}
       </button>
     </div>
   )
 }
-

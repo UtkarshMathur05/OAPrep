@@ -20,7 +20,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Recollect API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Memoize API", version="0.1.0", lifespan=lifespan)
 
 # Explicit origins, never "*" — credentials are allowed.
 app.add_middleware(

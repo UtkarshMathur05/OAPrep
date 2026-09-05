@@ -4,7 +4,7 @@ Why this exists: a live demo should not depend on Gemini being fast, up, or on
 the venue wifi working. Every call goes through here, so the second run of the
 golden demo path is instant, deterministic and offline.
 
-Set RECOLLECT_NO_CACHE=1 while tuning prompts, or the cache will happily serve
+Set MEMOIZE_NO_CACHE=1 while tuning prompts, or the cache will happily serve
 you yesterday's answer.
 """
 
@@ -16,14 +16,21 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-# `or` not a getenv default: an env var set to empty (RECOLLECT_CACHE_DIR= in
+# `or` not a getenv default: an env var set to empty (MEMOIZE_CACHE_DIR= in
 # .env) returns "", and Path("") is the current directory, which scatters
 # cache files wherever the process happens to be running.
-CACHE_DIR = Path(os.getenv("RECOLLECT_CACHE_DIR") or Path(__file__).parent / ".cache")
+# RECOLLECT_* accepted as a fallback so an .env written before the rename
+# keeps working rather than silently reverting to defaults.
+CACHE_DIR = Path(
+    os.getenv("MEMOIZE_CACHE_DIR")
+    or os.getenv("RECOLLECT_CACHE_DIR")
+    or Path(__file__).parent / ".cache"
+)
 
 
 def enabled() -> bool:
-    return os.getenv("RECOLLECT_NO_CACHE", "").strip() not in ("1", "true", "yes")
+    off = os.getenv("MEMOIZE_NO_CACHE") or os.getenv("RECOLLECT_NO_CACHE") or ""
+    return off.strip() not in ("1", "true", "yes")
 
 
 def key(*parts: Any) -> str:

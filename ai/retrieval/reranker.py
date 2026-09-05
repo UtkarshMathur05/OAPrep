@@ -12,12 +12,15 @@ candidates at all (CLAUDE.md §20).
 from __future__ import annotations
 
 import json
+import logging
 from typing import List
 
 from pydantic import BaseModel, Field
 
 from ai.gemini_client import AIError, generate_structured, load_prompt
 from ai.models.problem_genome import ProblemCandidate, ProblemGenome
+
+log = logging.getLogger(__name__)
 
 # Enough of the statement to judge the match; short enough to keep the prompt
 # small, which matters on a 20-requests-per-day free tier.
@@ -68,8 +71,11 @@ def rerank(genome: ProblemGenome, candidates: List[ProblemCandidate]) -> List[Pr
 
     try:
         result = generate_structured(prompt, RerankResponse)
-    except AIError:
-        # Keep the vector ordering rather than losing the candidates entirely.
+    except AIError as exc:
+        # Keep the vector ordering rather than losing the candidates entirely,
+        # but say so: a silent fallback looks like a working rerank that just
+        # produced tightly-bunched scores and no reasons.
+        log.warning("rerank failed, falling back to vector order: %s", exc)
         return sorted(candidates, key=lambda c: -c.confidence)
 
     judged = {r.id: r for r in result.candidates}

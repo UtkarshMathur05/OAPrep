@@ -1,4 +1,4 @@
-"""Recollect backend.
+"""Memoize backend.
 
 The backend imports the `ai` package, which lives at the repo root, while
 uvicorn is normally started from `backend/`. Put the repo root on sys.path here

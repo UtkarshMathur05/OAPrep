@@ -1,8 +1,8 @@
-# Recollect — Claude Code Project Context
+# Memoize — Claude Code Project Context
 
 ## 1. Project Overview
 
-**Recollect** is an AI-powered system that helps users reconstruct coding problems they remember but cannot fully recall.
+**Memoize** is an AI-powered system that helps users reconstruct coding problems they remember but cannot fully recall.
 
 The core problem:
 
@@ -10,7 +10,7 @@ The core problem:
 
 Instead of searching manually through hundreds of coding problems, the user describes what they remember.
 
-Recollect:
+Memoize:
 
 ```text
 User's vague memory
@@ -44,7 +44,7 @@ The product should feel like:
 
 > "I remember this coding problem, but I don't remember what it was."
 
-Recollect helps recover it.
+Memoize helps recover it.
 
 ---
 
@@ -71,7 +71,7 @@ A smaller working system is much more valuable than a theoretically perfect arch
 
 # 3. Core Product Concept
 
-The important distinction is that Recollect is NOT simply:
+The important distinction is that Memoize is NOT simply:
 
 > "Search coding problems using keywords."
 
@@ -79,7 +79,7 @@ It is also NOT simply:
 
 > "Ask an LLM to guess a coding problem."
 
-Instead, Recollect separates the process into stages.
+Instead, Memoize separates the process into stages.
 
 ### Stage 1 — Memory
 
@@ -173,7 +173,7 @@ This distinction is important.
 
 The user can write a solution.
 
-Recollect executes the solution against test cases and shows:
+Memoize executes the solution against test cases and shows:
 
 ```text
 Accepted
@@ -185,7 +185,7 @@ Runtime: 0.21s
 
 # 4. MVP
 
-The minimum successful Recollect demo is:
+The minimum successful Memoize demo is:
 
 ```text
 Input memory
@@ -1209,7 +1209,7 @@ Focus on:
 
 The ideal user experience:
 
-### Screen 1 — Recollect
+### Screen 1 — Memoize
 
 Simple introduction:
 
@@ -1238,7 +1238,7 @@ We found:
 ? Exact constraints are unknown
 ```
 
-This demonstrates that Recollect understands uncertainty.
+This demonstrates that Memoize understands uncertainty.
 
 ---
 
@@ -1512,7 +1512,7 @@ When working on this repository:
 
 The single most important goal is:
 
-> **Make Recollect's core "I vaguely remember a coding problem → Recollect finds and reconstructs it" experience work reliably and look impressive.**
+> **Make Memoize's core "I vaguely remember a coding problem → Memoize finds and reconstructs it" experience work reliably and look impressive.**
 
 The system should demonstrate genuine technical depth through:
 
@@ -1531,7 +1531,7 @@ Do not let secondary features distract from this core experience.
 The intended architecture is:
 
 ```text
-                         RECOLLECT
+                         MEMOIZE
                              │
                              ▼
                     ┌─────────────────┐
@@ -1568,7 +1568,7 @@ The intended architecture is:
                   └───────────────┘
 ```
 
-This is the canonical architecture for the Recollect hackathon MVP.
+This is the canonical architecture for the Memoize hackathon MVP.
 
 ---
 

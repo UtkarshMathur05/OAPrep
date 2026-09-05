@@ -73,7 +73,7 @@ Gotchas worth knowing:
 `GET /health/db` reports reachability plus corpus size:
 
 ```json
-{ "status": "ok", "db": "recollect", "problems": 5, "embedded": 0 }
+{ "status": "ok", "db": "memoize", "problems": 5, "embedded": 0 }
 ```
 
 It returns 503 with the driver's message when the database is down.

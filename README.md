@@ -1,9 +1,9 @@
-# Recollect
+# Memoize
 
 Reconstruct the coding problem you can't quite remember.
 
 You describe a half-remembered problem ("there was a grid, you could only move
-right or down, and you had to minimize something"). Recollect extracts what you
+right or down, and you had to minimize something"). Memoize extracts what you
 actually remember, searches a corpus of known problems, reranks the matches,
 rebuilds the full statement, and then lets you solve and verify it in the browser.
 
@@ -81,8 +81,8 @@ recollect/
 ## Installation
 
 ```bash
-git clone <repo-url> recollect
-cd recollect
+git clone <repo-url> memoize
+cd memoize
 cp .env.example .env        # then fill in GEMINI_API_KEY
 ```
 

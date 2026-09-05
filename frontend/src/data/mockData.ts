@@ -18,7 +18,7 @@ export const mockGenome: Genome = {
   data_structures: ['2d array'],
   algorithm_hints: [],
   // Render these visually distinct from the certain fields - this is the screen
-  // that shows Recollect handles doubt.
+  // that shows Memoize handles doubt.
   uncertainties: ['whether there were obstacles'],
 }
 

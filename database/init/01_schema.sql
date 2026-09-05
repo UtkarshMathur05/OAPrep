@@ -1,4 +1,4 @@
--- Recollect MVP schema.
+-- Memoize MVP schema.
 -- Runs automatically on first `docker compose up` (empty volume only).
 
 CREATE EXTENSION IF NOT EXISTS vector;

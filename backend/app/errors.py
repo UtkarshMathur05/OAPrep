@@ -13,7 +13,7 @@ import psycopg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-log = logging.getLogger("recollect")
+log = logging.getLogger("memoize")
 
 
 def _json(status: int, detail: str, hint: str | None = None) -> JSONResponse:

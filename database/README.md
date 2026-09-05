@@ -52,13 +52,13 @@ them, re-run with `docker compose down -v && docker compose up -d`, or apply the
 change by hand:
 
 ```bash
-docker compose exec -T db psql -U recollect -d recollect < database/init/01_schema.sql
+docker compose exec -T db psql -U memoize -d memoize < database/init/01_schema.sql
 ```
 
 ## Connecting
 
 ```bash
-docker compose exec db psql -U recollect -d recollect
+docker compose exec db psql -U memoize -d memoize
 ```
 
 `DATABASE_URL=postgresql://recollect:recollect@localhost:5432/recollect`
@@ -69,7 +69,7 @@ docker compose exec db psql -U recollect -d recollect
 database that already exists. Apply the change by hand as well:
 
 ```bash
-docker compose exec -T db psql -U recollect -d recollect \
+docker compose exec -T db psql -U memoize -d memoize \
   -c "ALTER TABLE problem_memories ADD COLUMN IF NOT EXISTS ..."
 ```
 

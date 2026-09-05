@@ -1,57 +1,36 @@
 import type { VerifyResponse } from '../types'
-import { useState } from 'react'
 
 export default function TestResults({ result }: { result: VerifyResponse }) {
-  const [expanded, setExpanded] = useState(false)
-  
-  const isSuccess = result.status.toLowerCase().includes('accepted')
-  
+  const passed = result.status === 'Accepted' && result.total > 0
+  const failing = (result.results ?? []).find((r) => !r.passed)
+
   return (
-    <div className={`border-2 p-6 shadow-[4px_4px_0px_0px] ${
-      isSuccess 
-        ? 'border-[#2e7d32] bg-[#f1f8f1] shadow-[#2e7d32]' 
-        : 'border-brownRed bg-brownRed/5 shadow-brownRed'
-    }`}>
-      <div className="flex justify-between items-end mb-4 border-b-2 border-current pb-4 opacity-80">
-        <div>
-          <h3 className={`text-2xl font-bold uppercase tracking-tight ${isSuccess ? 'text-[#2e7d32]' : 'text-brownRed'}`}>
-            {isSuccess ? '✓ Accepted' : '✗ ' + result.status}
-          </h3>
-          <p className="text-sm font-medium mt-1 text-shadowGrey/70">
-            {result.passed} / {result.total} test cases passed
-          </p>
-        </div>
-        <div className="text-right text-sm font-mono text-shadowGrey/80">
-          <div>Runtime: {result.runtime || 'N/A'}</div>
-          <div>Memory: {result.memory || 'N/A'}</div>
-        </div>
+    <div className="border border-ruleStrong bg-surface">
+      <div className={`flex flex-wrap items-baseline justify-between gap-3 border-l-4 px-4 py-3
+                      ${passed ? 'border-l-brownRed' : 'border-l-amberEarth'}`}>
+        <span className="font-medium">{result.status}</span>
+        <span className="font-mono text-sm tabular-nums text-muted">
+          {result.passed}/{result.total} passed
+          {result.runtime && ` · ${result.runtime}`}
+          {result.memory && ` · ${result.memory}`}
+        </span>
       </div>
-      
-      {result.results.length > 0 && !isSuccess && (
-         <div className="mt-6">
-            <button 
-              onClick={() => setExpanded(!expanded)} 
-              className="text-xs font-bold uppercase tracking-widest text-brownRed hover:opacity-70 transition-opacity flex items-center gap-2"
-            >
-              <span className="text-lg leading-none">{expanded ? '-' : '+'}</span>
-              {expanded ? 'Hide Failing Cases' : 'View Failing Cases'}
-            </button>
-            
-            {expanded && (
-               <div className="space-y-4 mt-4">
-                 {result.results.filter(r => !r.passed).map((r, idx) => (
-                    <div key={idx} className="bg-white border-2 border-brownRed/30 p-4 font-mono text-sm">
-                       <div className="text-xs font-bold text-shadowGrey/50 mb-3 uppercase tracking-wider">Test Case {r.index ?? idx + 1}</div>
-                       <div className="mb-3"><span className="text-shadowGrey font-bold">Input:</span> <br/><span className="text-prussianBlue">{r.input}</span></div>
-                       <div className="mb-3"><span className="text-[#2e7d32] font-bold">Expected Output:</span> <br/>{r.expected_output}</div>
-                       <div><span className="text-brownRed font-bold">Actual Output:</span> <br/>{r.actual_output}</div>
-                    </div>
-                 ))}
-               </div>
-            )}
-         </div>
+
+      {failing && (
+        <div className="border-t border-rule px-4 py-3">
+          <p className="mb-2 text-sm text-muted">First failing case</p>
+          <dl className="grid gap-2 font-mono text-sm sm:grid-cols-[5rem_1fr]">
+            <dt className="text-muted">Input</dt>
+            <dd className="whitespace-pre-wrap break-all">{failing.input}</dd>
+            <dt className="text-muted">Expected</dt>
+            <dd className="whitespace-pre-wrap break-all">{failing.expected_output}</dd>
+            <dt className="text-muted">Got</dt>
+            <dd className="whitespace-pre-wrap break-all text-brownRed">
+              {failing.actual_output || '(nothing)'}
+            </dd>
+          </dl>
+        </div>
       )}
     </div>
   )
 }
-

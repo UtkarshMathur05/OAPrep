@@ -45,7 +45,7 @@ query questionData($titleSlug: String!) {
 HEADERS = {
     "Content-Type": "application/json",
     "Referer": "https://leetcode.com",
-    "User-Agent": "Mozilla/5.0 (compatible; recollect-hackathon/0.1)",
+    "User-Agent": "Mozilla/5.0 (compatible; memoize-hackathon/0.1)",
 }
 
 

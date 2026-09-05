@@ -45,7 +45,7 @@ Set `VITE_USE_MOCK=true` and build the whole thing against
 - [ ] `VoiceRecorder` — Web Speech API (`webkitSpeechRecognition`), textarea fallback
 - [ ] `MemoryCard` — render the genome, and make the **uncertainties visually
       distinct** (`✓ Grid` vs `? Obstacles uncertain`). This is the screen that
-      shows Recollect handles doubt; it is the product's whole differentiator.
+      shows Memoize handles doubt; it is the product's whole differentiator.
 - [ ] `CandidateList` + `ConfidenceScore` — show `reason`, `topics`, and
       "asked at Google, Amazon and 39 others" from `company_count`
 - [ ] Optional company filter chip, feeding `companies` on `POST /search`

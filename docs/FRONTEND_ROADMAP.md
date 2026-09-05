@@ -17,7 +17,7 @@ router and entry point are already wired.
 
 ## The one thing that matters
 
-Recollect is not "search for a problem." It is **"I half-remember something,
+Memoize is not "search for a problem." It is **"I half-remember something,
 help me recover it"** — and the product's whole differentiator is that it
 distinguishes what you *remembered* from what was *retrieved* from what the
 model *inferred* (CLAUDE.md §19).
