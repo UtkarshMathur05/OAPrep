@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
+
+# Where a piece of the reconstructed problem came from. Keeping these apart is
+# the product's whole differentiator (CLAUDE.md §19) — never silently promote an
+# inference to a remembered fact.
+Provenance = Literal["remembered", "retrieved", "inferred"]
 
 
 class ProblemGenome(BaseModel):
@@ -21,6 +26,10 @@ class ProblemGenome(BaseModel):
     data_structures: List[str] = Field(default_factory=list)
     algorithm_hints: List[str] = Field(default_factory=list)
     uncertainties: List[str] = Field(default_factory=list)
+
+    def is_empty(self) -> bool:
+        """True when there is nothing to search on — skip the API call."""
+        return not self.to_query_text()
 
     def to_query_text(self) -> str:
         """Flatten the genome into text suitable for embedding."""
@@ -46,6 +55,13 @@ class ProblemCandidate(BaseModel):
     difficulty: Optional[str] = None
     source_url: Optional[str] = None
     reason: Optional[str] = None
+    # Corpus metadata. `topics` maps onto the genome's concepts/data_structures;
+    # `popularity` is the reranker's tiebreaker; `company_count` is what the UI
+    # renders as "asked at Google, Amazon and 124 others".
+    topics: List[str] = Field(default_factory=list)
+    companies: List[str] = Field(default_factory=list)
+    company_count: int = 0
+    popularity: float = 0.0
 
 
 class ReconstructedProblem(BaseModel):
@@ -56,6 +72,12 @@ class ReconstructedProblem(BaseModel):
     constraints: List[str] = Field(default_factory=list)
     examples: List[dict] = Field(default_factory=list)
     confidence: float = 0.0
+    # Field name -> where it came from, e.g. {"constraints": "retrieved"}.
+    provenance: Dict[str, Provenance] = Field(default_factory=dict)
+    # Human-readable caveats: "You recalled obstacles; this problem has none."
+    notes: List[str] = Field(default_factory=list)
+    # Seeded into the Monaco buffer on the Practice screen.
+    starter_code: Optional[str] = None
 
 
 class TestCase(BaseModel):

@@ -1,31 +1,50 @@
 You extract a structured "Problem Genome" from a person's vague memory of a coding problem.
 
+The output schema is enforced by the API, so spend your attention on WHICH field
+each detail belongs in. That routing decision is the whole job.
+
 Rules:
 - Record ONLY what the person actually said or clearly implied.
-- Do NOT guess which problem it is. Do NOT invent constraints or examples.
-- If something is fuzzy or contradictory, put it in "uncertainties" instead of asserting it.
-- Keep every entry short (1-4 words) except "objective", which is one short phrase.
+- Do NOT guess which problem it is. Do NOT name a specific problem.
+- Do NOT invent constraints, examples or limits the person did not mention.
+- Anything the person hedged goes in "uncertainties" and NOWHERE ELSE. A hedged
+  detail is not a constraint. Hedging sounds like: "I think", "maybe", "possibly",
+  "not sure", "something like", "it might have been", "or maybe it was".
+- If the person contradicts themselves, record both readings in "uncertainties".
+- Keep every entry short (1-4 words) except "objective" (one short phrase) and
+  "uncertainties" (a short clause).
 - Use lowercase for concepts, operations, data_structures and algorithm_hints.
-
-Return ONLY valid JSON with exactly this shape:
-{
-  "concepts": [],
-  "operations": [],
-  "objective": null,
-  "constraints": [],
-  "data_structures": [],
-  "algorithm_hints": [],
-  "uncertainties": []
-}
+- Leave a field empty rather than padding it. A sparse genome is a useful signal;
+  a padded one sends retrieval to the wrong problem.
 
 Field meanings:
-- concepts: the domain/topic ideas mentioned ("grid", "dynamic programming", "tree")
+- concepts: domain/topic ideas mentioned ("grid", "dynamic programming", "tree")
 - operations: actions or moves described ("move right", "move down", "swap")
 - objective: what the problem asks for ("minimize cost", "count paths")
-- constraints: limits explicitly remembered ("n <= 1000", "non-negative values")
+- constraints: limits the person stated with confidence ("n <= 1000", "non-negative")
 - data_structures: structures mentioned or implied ("2d array", "hash map")
 - algorithm_hints: techniques hinted at ("memoization", "bfs")
-- uncertainties: things the person was unsure about ("maybe there were obstacles")
+- uncertainties: everything the person was unsure about
+
+Worked example.
+
+MEMORY: "There was a grid and you moved right or down to get to the corner, and
+you wanted the cheapest path. I think there might have been obstacles? And I
+vaguely remember the numbers being non-negative, but don't quote me on that."
+
+EXTRACTION:
+- concepts: ["grid", "dynamic programming"]
+- operations: ["move right", "move down"]
+- objective: "minimize path cost"
+- constraints: []
+- data_structures: ["2d array"]
+- algorithm_hints: []
+- uncertainties: ["whether obstacles exist", "whether values are non-negative"]
+
+Note what happened there: "cheapest path" was stated confidently, so it became the
+objective. "Non-negative" SOUNDS like a constraint, but it was hedged with "vaguely
+remember" and "don't quote me", so it went to uncertainties and constraints stayed
+empty. Route on how confidently it was said, not on what kind of detail it is.
 
 USER MEMORY:
 {transcript}

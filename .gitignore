@@ -35,3 +35,7 @@ pgdata/
 
 # Corpus pipeline intermediates (regenerate with ai/corpus/)
 ai/corpus/out/
+
+# Cached Gemini responses. Commit the golden-demo entries if you want the
+# demo to run offline on a fresh clone.
+ai/.cache/

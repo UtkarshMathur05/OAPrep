@@ -54,6 +54,9 @@ def html_to_text(html: str) -> str:
     text = re.sub(r"(?is)<(script|style).*?</\1>", " ", html)
     text = re.sub(r"(?i)<(br|/p|/div|/li|/pre)[^>]*>", "\n", text)
     text = re.sub(r"(?i)<li[^>]*>", "- ", text)
+    # Exponents before the generic tag strip, else 10<sup>4</sup> -> "10 4".
+    text = re.sub(r"(?is)<sup>\s*(.*?)\s*</sup>", r"^\1", text)
+    text = re.sub(r"(?is)<sub>\s*(.*?)\s*</sub>", r"_\1", text)
     text = re.sub(r"<[^>]+>", " ", text)
     text = unescape(text)
     text = re.sub(r"[ \t\xa0]+", " ", text)

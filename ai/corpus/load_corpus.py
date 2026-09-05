@@ -6,6 +6,7 @@ database/init/03_corpus.sql so the team can restore it without re-embedding.
 
     python -m ai.corpus.load_corpus            # embed + load
     python -m ai.corpus.load_corpus --dump     # also write 03_corpus.sql
+    python -m ai.corpus.load_corpus --dump --skip-load   # no Postgres needed
     python -m ai.corpus.load_corpus --from-dump-only   # skip embedding entirely
 
 Commit the dump. Embedding 1,200 problems three times is a waste of the shared
@@ -17,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from pathlib import Path
 
 import psycopg
@@ -30,6 +32,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = Path(__file__).parent / "out"
 DUMP = REPO_ROOT / "database" / "init" / "03_corpus.sql"
 BATCH = 32
+# Free tier: 100 embed requests/minute, and one batch of 32 texts counts as
+# 32 requests. Pace proactively rather than bouncing off the limit.
+EMBEDS_PER_MINUTE = 90
 
 UPSERT = """
 INSERT INTO problems (
@@ -93,6 +98,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dump", action="store_true", help="also write database/init/03_corpus.sql")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--skip-load", action="store_true",
+                    help="embed and dump without touching Postgres (no Docker needed)")
     args = ap.parse_args()
 
     rows = join_rows()
@@ -100,19 +107,33 @@ def main() -> None:
         rows = rows[: args.limit]
     print(f"{len(rows)} problems have text and will be embedded")
 
+    pace = BATCH / EMBEDS_PER_MINUTE * 60
     for start in range(0, len(rows), BATCH):
         chunk = rows[start:start + BATCH]
+        began = time.monotonic()
         vectors = embed_batch([embed_text_for(r) for r in chunk])
         for row, vec in zip(chunk, vectors):
             row["embedding"] = vec
-        print(f"  embedded {min(start + BATCH, len(rows))}/{len(rows)}")
+        done = min(start + BATCH, len(rows))
+        print(f"  embedded {done}/{len(rows)}", flush=True)
 
-    dsn = os.getenv("DATABASE_URL")
-    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
-        for row in rows:
-            cur.execute(UPSERT, {**row, "embedding": str(row["embedding"])})
-        conn.commit()
-    print(f"loaded {len(rows)} problems into {dsn.rsplit('@', 1)[-1]}")
+        elapsed = time.monotonic() - began
+        # Cache hits cost no quota, so only pace when we actually called the API.
+        if elapsed > 1.0 and done < len(rows):
+            time.sleep(max(0.0, pace - elapsed))
+
+    # Generating the dump is pure text formatting, so it must not require a
+    # database. That keeps the AI lane independent of Dev 3's docker-compose:
+    # commit 03_corpus.sql and `docker compose up` loads it from database/init/.
+    if args.skip_load:
+        print("skipping database load (--skip-load)")
+    else:
+        dsn = os.getenv("DATABASE_URL")
+        with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+            for row in rows:
+                cur.execute(UPSERT, {**row, "embedding": str(row["embedding"])})
+            conn.commit()
+        print(f"loaded {len(rows)} problems into {dsn.rsplit('@', 1)[-1]}")
 
     if args.dump:
         DUMP.parent.mkdir(parents=True, exist_ok=True)
