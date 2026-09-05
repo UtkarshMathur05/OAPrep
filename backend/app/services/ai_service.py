@@ -5,24 +5,38 @@ can integrate before the AI modules land.
 TODO(backend): call ai.extraction / ai.retrieval / ai.reconstruction when ready.
 """
 
-from app.config import USE_MOCK_AI
+from app.config import GEMINI_API_KEY, USE_MOCK_AI
 from app.schemas.memory import Genome, MemoryRequest, MemoryResponse
 from app.schemas.reconstruct import Problem, ReconstructRequest, ReconstructResponse
 from app.schemas.search import Candidate, SearchRequest, SearchResponse
 
 
+def _mock_genome() -> Genome:
+    return Genome(
+        concepts=["grid", "dynamic programming"],
+        operations=["move right", "move down"],
+        objective="minimize cost",
+        uncertainties=["obstacles"],
+    )
+
+
 def extract_memory(req: MemoryRequest) -> MemoryResponse:
-    if USE_MOCK_AI:
-        return MemoryResponse(
-            memory_id="mock-memory-1",
-            memory=Genome(
-                concepts=["grid", "dynamic programming"],
-                operations=["move right", "move down"],
-                objective="minimize cost",
-                uncertainties=["obstacles"],
-            ),
-        )
-    raise NotImplementedError
+    """Transcript -> Problem Genome, via ai.extraction.
+
+    Falls back to the mock when USE_MOCK_AI is set or no key is configured, so
+    a teammate without a key still gets a correctly shaped response.
+    """
+    if USE_MOCK_AI or not GEMINI_API_KEY:
+        return MemoryResponse(memory_id=None, memory=_mock_genome())
+
+    # Imported lazily: `ai` pulls in google-genai, and a teammate running in
+    # mock mode should never pay that import cost or need the package.
+    from ai.extraction.genome import extract_genome
+
+    genome = extract_genome(req.transcript)
+    # ProblemGenome (ai) and Genome (api schema) carry the same seven fields;
+    # round-tripping through a dict keeps the two models decoupled.
+    return MemoryResponse(memory_id=None, memory=Genome(**genome.model_dump()))
 
 
 def search_candidates(req: SearchRequest) -> SearchResponse:
