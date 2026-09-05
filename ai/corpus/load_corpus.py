@@ -24,7 +24,7 @@ from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
 
-from ai.gemini_client import embed_batch
+from ai.gemini_client import AIError, embed_batch, is_daily_quota
 
 load_dotenv()
 
@@ -111,7 +111,17 @@ def main() -> None:
     for start in range(0, len(rows), BATCH):
         chunk = rows[start:start + BATCH]
         began = time.monotonic()
-        vectors = embed_batch([embed_text_for(r) for r in chunk])
+        try:
+            vectors = embed_batch([embed_text_for(r) for r in chunk])
+        except AIError as exc:
+            if not is_daily_quota(exc):
+                raise
+            # Out of embeddings until tomorrow. Dump what we have rather than
+            # leaving the team with no corpus at all (CLAUDE.md §20); the cache
+            # means a re-run tomorrow only embeds the remainder.
+            print(f"\n  daily embedding quota reached at {start}/{len(rows)}.")
+            print("  Dumping what is embedded so far; re-run tomorrow to finish.")
+            break
         for row, vec in zip(chunk, vectors):
             row["embedding"] = vec
         done = min(start + BATCH, len(rows))
@@ -121,6 +131,11 @@ def main() -> None:
         # Cache hits cost no quota, so only pace when we actually called the API.
         if elapsed > 1.0 and done < len(rows):
             time.sleep(max(0.0, pace - elapsed))
+
+    embedded = [r for r in rows if r.get("embedding")]
+    if len(embedded) != len(rows):
+        print(f"{len(rows) - len(embedded)} problems have no embedding yet and are excluded")
+    rows = embedded
 
     # Generating the dump is pure text formatting, so it must not require a
     # database. That keeps the AI lane independent of Dev 3's docker-compose:
