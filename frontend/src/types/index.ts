@@ -56,6 +56,8 @@ export interface Example {
 /**
  * How a part of the reconstructed problem came to be known.
  * CLAUDE.md §19 — an inference must never be rendered as a remembered fact.
+ * Render `inferred` visually distinct: the same treatment uncertainties get on
+ * the memory card.
  */
 export type Provenance = 'remembered' | 'retrieved' | 'inferred'
 
@@ -69,12 +71,14 @@ export interface Problem {
   /**
    * Field name -> provenance. Expected keys: 'title', 'description',
    * 'constraints', 'examples'. A missing key means the pipeline made no
-   * claim — render it unlabelled rather than assuming.
+   * claim — render it unlabelled rather than assuming. Partial<> because of
+   * that: reading an absent key must type as undefined, which is how
+   * ProblemDisplay already handles it.
    */
   provenance: Partial<Record<string, Provenance>>
-  /** Caveats for Screen 4, e.g. conflicts between memory and matched problem. */
+  /** Reader-facing caveats, e.g. "You recalled obstacles; this problem has none." */
   notes: string[]
-  /** Seeds the Monaco buffer. Python only. */
+  /** Seeds the Monaco buffer on the Practice screen. Python only. */
   starter_code?: string | null
 }
 export interface ReconstructResponse {

@@ -8,18 +8,38 @@ remembers.
 Rules:
 - Stay faithful to the known problem. Do not invent a different problem.
 - Where the memory adds a detail the known problem supports, keep the detail.
-- Where the memory conflicts with the known problem, follow the known problem.
-- Provide 1-3 concrete worked examples with input, output and a short explanation.
+- Where the memory conflicts with the known problem, follow the known problem
+  and record the conflict in "notes".
 - confidence is 0.0-1.0: how well the known problem explains the memory.
+- Write plain text. No LaTeX ($...$, 	imes), no markdown headings, no HTML.
+  The UI renders this as-is, so "m x n grid" not "$m 	imes n$ grid".
 
-Return ONLY valid JSON:
-{
-  "title": "...",
-  "description": "...",
-  "constraints": ["..."],
-  "examples": [{"input": "...", "output": "...", "explanation": "..."}],
-  "confidence": 0.0
-}
+INPUT/OUTPUT FORMAT — important:
+The solution will be executed by reading stdin and writing stdout, not by
+implementing a function signature. So:
+- Describe input as lines read from standard input, and say exactly what each
+  line contains and in what order.
+- Describe output as exactly what should be printed to standard output.
+- Every example's "input" must be the literal stdin text, and "output" the
+  literal stdout text. No function calls, no "nums = [2,7,11,15]" shorthand.
+
+Example of the right shape:
+  input:  "3 3\n1 3 1\n1 5 1\n4 2 1"
+  output: "7"
+with the description explaining that the first line holds the dimensions and
+the following lines hold the grid rows.
+
+PROVENANCE — this is the point of the product:
+For each of "title", "description", "constraints" and "examples", say where it
+came from:
+- "remembered": the person explicitly said it
+- "retrieved":  it comes from the known matched problem
+- "inferred":   you filled it in, and the person never mentioned it
+Never label something "remembered" that the person did not actually say.
+
+Put anything the person recalled that this problem does NOT contain into
+"notes", phrased for them to read, e.g. "You recalled obstacles; this problem
+has none - you may be thinking of Unique Paths II."
 
 PROBLEM GENOME:
 {genome}

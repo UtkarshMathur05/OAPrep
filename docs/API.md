@@ -98,18 +98,20 @@ Rebuild the full problem statement from a memory and the chosen candidate.
     "title": "Minimum Path Sum",
     "description": "...",
     "constraints": ["1 <= m, n <= 200"],
-    "examples": [{ "input": "...", "output": "...", "explanation": "..." }],
+    "examples": [
+      { "input": "3 3\n1 3 1\n1 5 1\n4 2 1", "output": "7", "explanation": "..." }
+    ],
     "confidence": 0.91,
     "provenance": {
       "title": "retrieved",
-      "description": "retrieved",
-      "constraints": "inferred",
+      "description": "inferred",
+      "constraints": "retrieved",
       "examples": "inferred"
     },
     "notes": [
-      "You weren't sure about obstacles; this problem has none."
+      "You recalled obstacles; this problem has none — you may be thinking of Unique Paths II."
     ],
-    "starter_code": "class Solution:\n    def minPathSum(self, grid): ..."
+    "starter_code": "import sys\n\ndef main():\n    ..."
   }
 }
 ```
@@ -150,6 +152,12 @@ the pipeline produced none; the editor should fall back to an empty buffer.
 
 All three fields are **additive and default to empty**, so a client that ignores
 them still works.
+
+### Examples are stdin/stdout
+
+`input` is the literal text the solution reads on standard input; `output` is
+exactly what it must print. Not function-call shorthand — Judge0 executes a
+script, not a method (§9), and `starter_code` is written to match.
 
 ---
 
