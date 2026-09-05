@@ -156,11 +156,50 @@ def get_memory(memory_id: str) -> Optional[dict]:
 
 # -------------------------------------------------------------------- test data
 
-def get_test_cases(problem_id: str, limit: int = 5):
-    """TODO(backend): task B6. Capped at the Judge0 ceiling."""
-    raise NotImplementedError
+def get_test_cases(problem_id: str, limit: int = 5) -> list[dict]:
+    """Test cases for a problem, oldest first. Accepts a UUID or a slug.
+
+    Capped at `limit` (default 5) — the public Judge0 CE instance is
+    rate-limited, and five cases is enough to show pass/fail convincingly.
+    """
+    return query(
+        """
+        SELECT t.id::text AS id, t.input, t.expected_output
+        FROM test_cases t
+        JOIN problems p ON p.id = t.problem_id
+        WHERE p.id = %(pid)s OR p.slug = %(slug)s
+        ORDER BY t.created_at
+        LIMIT %(limit)s
+        """,
+        {"pid": _as_uuid(problem_id), "slug": problem_id, "limit": limit},
+    )
 
 
-def save_submission(problem_id: str, code: str, language: str, result) -> str:
-    """TODO(backend): task B6."""
-    raise NotImplementedError
+def resolve_problem_id(problem_id: str) -> Optional[str]:
+    """Map a UUID-or-slug to the canonical UUID. None when no such problem."""
+    row = query_one(
+        "SELECT id::text AS id FROM problems WHERE id = %(pid)s OR slug = %(slug)s",
+        {"pid": _as_uuid(problem_id), "slug": problem_id},
+    )
+    return row["id"] if row else None
+
+
+def save_submission(problem_id: str, code: str, language: str, result) -> Optional[str]:
+    """Record a run. `result` is a schemas.verify.VerifyResponse.
+
+    Returns None when the problem does not exist — a submission row would
+    violate the FK, and a failed audit write must not sink the user's result.
+    """
+    canonical = resolve_problem_id(problem_id)
+    if canonical is None:
+        return None
+
+    row = execute(
+        """
+        INSERT INTO submissions (problem_id, code, language, status, runtime, memory)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        RETURNING id::text AS id
+        """,
+        (canonical, code, language, result.status, result.runtime, result.memory),
+    )
+    return row["id"]

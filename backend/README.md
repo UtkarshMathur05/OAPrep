@@ -105,7 +105,7 @@ See [../docs/API.md](../docs/API.md) for the full contract.
 | GET | `/memory/{id}` | read back a stored genome | live |
 | POST | `/search` | genome → ranked candidates | mocked |
 | POST | `/reconstruct` | memory + candidate → full problem | mocked |
-| POST | `/verify` | code → Judge0 results | mocked |
+| POST | `/verify` | code → Judge0 results | **live** |
 
 `/problems` returns `{total, limit, offset, problems[]}` — `total` is the count
 matching the filters, not the page size. `companies` on each row is sliced to 5
@@ -116,11 +116,63 @@ shape from `/reconstruct`**. A corpus row is stored text; a reconstructed
 problem also carries `constraints`, `examples`, `confidence` and `provenance`,
 which Gemini produces at reconstruct time and which are not columns.
 
+## Code execution (Judge0)
+
+Setup options and API gotchas: **[../docs/JUDGE0.md](../docs/JUDGE0.md)**.
+
+`POST /verify` runs real code. Flow:
+
+```
+/verify -> resolve problem (uuid or slug) -> load <=5 test cases
+        -> POST /submissions/batch  (one request, all cases)
+        -> poll GET /submissions/batch until every status.id > 2
+        -> compare stdout to expected_output, rstrip'd
+        -> save to `submissions` -> VerifyResponse
+```
+
+Notes from the live API, worth knowing before you change anything:
+
+* `time` is a **string** in seconds (`"0.011"`); `memory` is an **int in KB**.
+* `stdout` always has a trailing newline — hence `rstrip()` on both sides.
+* The batch endpoint returns **201**, and does **not** support `wait=true`;
+  it must be polled. Status ids 1 and 2 are queued/processing.
+* Judge0 reports `Accepted` when the program merely *ran*. We never send it an
+  `expected_output`, so correctness is decided here — a run can be `Accepted`
+  by Judge0 and still be `Wrong Answer` to us.
+* On failure, `actual_output` falls back to stderr/compile output so the UI can
+  show why.
+* Python only (`LANGUAGE_IDS`). Other languages return a message, not an error.
+* Network failure degrades to a `Judge0 unavailable: ...` status, never a 500.
+
+## Error handling
+
+Handlers live in [app/errors.py](app/errors.py), registered most-specific-first.
+Nothing escapes as a bare 500, and every response carries an actionable `hint`.
+
+| Failure | Status | Response |
+| --- | --- | --- |
+| Postgres unreachable | 503 | "Database unavailable." + `docker compose up -d` |
+| Other `psycopg.Error` | 500 | names the type; points at a stale volume for a missing column |
+| Judge0 / Gemini failure | 502 | suggests `USE_MOCK_AI=true` |
+| `NotImplementedError` | 501 | "not implemented yet" + how to fall back to mocks |
+| Anything else | 500 | logged with traceback; the client gets a message, never internals |
+
+**Startup guard:** `USE_MOCK_AI=false` with no `GEMINI_API_KEY` refuses to boot
+rather than failing on the first request mid-demo. `.env.example` placeholders
+(`your_..._here`) count as unset, so a copied-but-unedited `.env` is caught.
+
+`GET /health` reports both flags:
+
+```json
+{ "status": "ok", "mock_ai": true, "ai_ready": false }
+```
+
 ### Remaining backend tasks
 
 | Task | Scope |
 | --- | --- |
-| B6 | `get_test_cases`, `save_submission` |
-| B7–B8 | Judge0: one submission, then batch + aggregate |
-| B9 | error handling — no bare 500s (§20) |
 | B10 | swap `ai_service` mocks for real `ai.*` calls (needs Dev 2) |
+
+Done: B1 connection helper · B2 schema split · B3–B4 corpus browse ·
+B5 memory persistence · B6 test cases + submissions · B7–B8 Judge0 ·
+B9 error handling.

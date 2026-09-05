@@ -103,6 +103,8 @@ service at a time as Dev 2 lands modules.
 - [ ] Error handling: Gemini failure, bad AI output, empty results, Judge0
       timeout — a useful message, never a 500 (§20)
 
+Setup options: **[JUDGE0.md](JUDGE0.md)**.
+
 **Judge0 is the likeliest demo-day failure.** The public CE instance is
 rate-limited and often down. Keep the mock path working, and treat Judge0 as the
 last milestone, not the first.

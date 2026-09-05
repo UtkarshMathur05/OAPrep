@@ -6,7 +6,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://recollect:recollect@localhost:5432/recollect")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+def _real(value: str) -> str:
+    """Treat .env.example placeholders as unset, so readiness checks are honest."""
+    v = (value or "").strip()
+    return "" if not v or v.startswith("your_") or v.endswith("_here") else v
+
+
+GEMINI_API_KEY = _real(os.getenv("GEMINI_API_KEY", ""))
 JUDGE0_URL = os.getenv("JUDGE0_URL", "https://ce.judge0.com")
 JUDGE0_API_KEY = os.getenv("JUDGE0_API_KEY", "")
 JUDGE0_API_HOST = os.getenv("JUDGE0_API_HOST", "")

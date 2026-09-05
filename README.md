@@ -186,7 +186,8 @@ Task-by-task breakdown, with owners and the order things unblock in:
 
 Per-area detail: **[docs/FRONTEND_ROADMAP.md](docs/FRONTEND_ROADMAP.md)** (Dev 1),
 **[ai/corpus/README.md](ai/corpus/README.md)** (Dev 2, Milestone 0),
-**[backend/README.md](backend/README.md)** (Dev 3).
+**[backend/README.md](backend/README.md)** (Dev 3),
+**[docs/JUDGE0.md](docs/JUDGE0.md)** (code execution setup).
 
 ## Git workflow
 
