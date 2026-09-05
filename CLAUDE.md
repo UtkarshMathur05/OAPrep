@@ -244,6 +244,19 @@ The frontend must NOT contain:
 * retrieval logic
 * Judge0 credentials
 
+**Hackathon decisions:**
+
+* Voice input uses the **browser Web Speech API** (`webkitSpeechRecognition`), not
+  audio upload + server transcription. Zero backend work; Chrome-only is fine for
+  a demo. A textarea is always the fallback.
+* The recall flow is **one page with a `step` state**, not four routes. The flow
+  is linear and every step needs the previous step's data — routing would mean
+  serializing genome/candidates/problem between routes for no benefit.
+* Tailwind v3 (not v4). Better-documented, and every snippet you'll paste at
+  hour 30 assumes it.
+* Monaco loads from a CDN by default. If the venue wifi is unreliable, vendor it
+  (`loader.config({ paths: { vs: '/vs' } })`).
+
 ---
 
 # 6. Backend
@@ -307,6 +320,18 @@ AI responsibilities:
 5. Candidate reranking
 6. Problem reconstruction
 7. Test generation
+
+**Hackathon decisions:**
+
+* Use Gemini's **native structured output** — `response_mime_type="application/json"`
+  plus `response_schema=<PydanticModel>` — never "return JSON" in the prompt text
+  followed by regex repair. This removes a whole class of parse failures.
+* Model: `gemini-2.5-flash` everywhere. Do not reach for a larger model; latency
+  during a live demo matters more than marginal quality.
+* Cache every AI response to disk, keyed by a hash of the input. The golden demo
+  path then runs instantly, deterministically, and offline.
+* Embeddings: `gemini-embedding-001` at 768 dimensions. Batch them; the free tier
+  is rate-limited per minute.
 
 ---
 
@@ -373,6 +398,23 @@ created_at
 
 Do not create unnecessary tables during the hackathon.
 
+### Corpus metadata on `problems`
+
+The corpus comes from `data/leetcode-companywise-interview-questions/`, so
+`problems` also carries `slug` (unique upsert key), `leetcode_id`, `topics[]`
+(LeetCode topicTags), `companies[]`, `company_count`, `popularity` (summed
+per-company Frequency %), `acceptance`, `recency` and `description_source`.
+
+These are columns, not tables — no join, no schema sprawl. `companies` is
+GIN-indexed for `WHERE companies @> ARRAY['google']`.
+
+**Do not add an ANN index.** At hackathon corpus size (500–5000 problems) an exact
+scan is ~2ms, while an `ivfflat` index with the usual `lists=100` *reduces* recall
+for no measurable gain. Plain `ORDER BY embedding <=> %s LIMIT k` is correct here.
+
+Use raw SQL with `psycopg`. No SQLAlchemy, no Alembic — the schema is four tables
+that change by editing one `.sql` file.
+
 ---
 
 # 9. Code Execution
@@ -417,6 +459,25 @@ Example:
 ```
 
 Do not build a custom code execution sandbox during the hackathon.
+
+**Hackathon decisions:**
+
+* **Python only** for the MVP. Judge0 takes stdin and returns stdout, but coding
+  problems are function-signature shaped — so each language needs its own driver
+  that parses stdin, calls the function, and prints the result. One language means
+  one template; four means four, plus four sets of edge cases. List other
+  languages as future work.
+* **Standardize on stdin/stdout now**, before test-case generation starts.
+  `test_cases.input` is exactly what Judge0 receives on stdin;
+  `expected_output` is compared to stdout after trailing-whitespace stripping.
+  Deciding this late means regenerating every test case.
+* Use the **batch endpoint** (`POST /submissions/batch`) — one HTTP round trip for
+  all test cases, not one per case.
+* **Cap test cases at 5.** The public CE instance is aggressively rate-limited.
+* Judge0 is the **most likely thing to fail on demo day**: the public instance is
+  often down, and self-hosting needs privileged containers and cgroup setup you do
+  not want to debug at hour 30. Keep `USE_MOCK_AI=true` working as a fallback, and
+  set an explicit `httpx` timeout on every call.
 
 ---
 
@@ -765,6 +826,17 @@ Response:
 }
 ```
 
+### Amendments
+
+`POST /search` has since gained two additive fields, documented in `docs/API.md`:
+
+* request: optional `companies: string[]` — corpus filter applied before the
+  vector search
+* response: `topics`, `companies` and `company_count` on each candidate, for the
+  UI to render
+
+Additive only; existing clients are unaffected.
+
 Do not casually change these contracts.
 
 If a change is necessary, update:
@@ -802,6 +874,12 @@ Always update:
 ```
 
 when adding a new required environment variable.
+
+The full set is documented in `.env.example` and the root `README.md`. Beyond the
+three above, the ones that matter are `USE_MOCK_AI` (canned backend responses),
+`EMBEDDING_DIM` (must match the `VECTOR(n)` column), and `CORS_ORIGINS`.
+
+Only `VITE_*` variables reach the browser. Never put a key behind that prefix.
 
 ---
 
@@ -853,6 +931,53 @@ This allows Developer 1 to work independently.
 Do NOT build everything simultaneously without integration.
 
 Follow these milestones.
+
+## Milestone 0 — Corpus
+
+**This is the real critical path and it is easy to miss.** Retrieval cannot return
+anything without an embedded corpus of known problems, which means no candidates,
+no reconstruction, and no demo.
+
+The source data is already in the repo: `data/leetcode-companywise-interview-questions/`
+holds 3,399 unique problems across 660 companies (41,546 pairs) as CSVs.
+
+**It has no problem statements — only titles.** That is the gap the pipeline in
+`ai/corpus/` closes, in four steps:
+
+```text
+build_index.py       1,642 CSVs -> 1,200 problems ranked by popularity   ~2s
+fetch_descriptions.py  LeetCode GraphQL -> real statements + topicTags   ~30m
+gapfill.py             Gemini describes the premium-locked ones          ~5m
+load_corpus.py --dump  embed -> Postgres -> database/init/03_corpus.sql  ~5m
+```
+
+**Commit `03_corpus.sql`.** Re-embedding on three machines wastes the shared
+Gemini quota; a fresh clone plus `docker compose up -d` should give every
+developer working retrieval for free.
+
+Full runbook: `ai/corpus/README.md`.
+
+### The company data is a feature
+
+`companies` and `popularity` are worth designing around, not just storing:
+
+* **Filter** — "it was a Google question" prunes 3,399 candidates to 2,325
+  *before* the vector search runs. Exposed as the optional `companies` field on
+  `POST /search`.
+* **Reranking prior** — between two candidates that fit the memory equally well,
+  the one 126 companies ask is the likelier memory.
+* **Demo** — "asked at Google, Amazon and 124 others" on a candidate card is a
+  concrete, credible detail that costs nothing to render.
+
+### Honest gaps over confident fabrication
+
+If Gemini does not recognise a premium-locked problem, `gapfill.py` records no
+description and `load_corpus.py` skips the row. A missing problem is recoverable;
+a corpus row containing a plausible-sounding invented problem quietly corrupts
+retrieval and reconstruction for the rest of the hackathon. This is §19's
+certain/uncertain/inferred rule applied to the corpus itself.
+
+---
 
 ## Milestone 1 — Environment
 
@@ -1275,6 +1400,12 @@ Unless explicitly required later, do NOT add:
 * complicated agent orchestration
 * elaborate CI/CD
 * production-grade observability
+* an ORM or migration tool (raw SQL is four tables)
+* an ANN / vector index (exact scan is fast enough at this size)
+* multi-language code execution (Python only)
+* server-side speech transcription (the browser does it)
+* async/`asyncpg` plumbing — plain `def` endpoints are threadpooled by FastAPI
+* deployment; the demo runs on localhost
 
 These are distractions during the hackathon.
 
@@ -1438,3 +1569,54 @@ The intended architecture is:
 ```
 
 This is the canonical architecture for the Recollect hackathon MVP.
+
+---
+
+# 28. Stack Hardening Decisions
+
+The stack in §5–§9 is correct. These are the specific narrowings that make it
+buildable in 36 hours, collected in one place. Each removes work without removing
+anything the demo shows.
+
+| Decision | Instead of | Why |
+| --- | --- | --- |
+| Commit an embedded corpus dump | Each dev embeds their own | The corpus is the critical path; build it once |
+| Python-only execution | Multi-language | Each language needs its own stdin→function driver |
+| stdin/stdout problem format | LeetCode function signatures | Judge0 speaks stdin/stdout; decide before generating tests |
+| Judge0 batch endpoint, 5 cases | One request per case | Public CE instance is rate-limited |
+| Gemini `response_schema` | "Return JSON" + regex repair | Removes malformed-JSON failures entirely |
+| Exact vector scan | `ivfflat` index | ANN hurts recall below ~10k rows |
+| Disk cache on AI calls | Live calls during the demo | Instant, deterministic, survives bad wifi |
+| Web Speech API | Audio upload + transcription | Hours of backend work for no demo gain |
+| One venv for `backend/` + `ai/` | Two venvs, two requirements files | The backend imports `ai.*` anyway |
+| Single-page stepper | Four routes | Linear flow; each step needs the previous step's data |
+| Raw SQL + `psycopg` | SQLAlchemy + Alembic | Four tables, one `.sql` file |
+| Sync `def` endpoints | `async` + `asyncpg` | FastAPI threadpools them; async buys nothing here |
+
+## Degradation ladder
+
+Each stage must fail into the stage below rather than breaking the demo:
+
+```text
+Live Gemini + live Judge0        ← ideal
+  ↓ Gemini slow or rate-limited
+Cached AI responses              ← golden demo path
+  ↓ Judge0 down
+USE_MOCK_AI=true                 ← canned but correctly-shaped
+  ↓ backend down
+VITE_USE_MOCK=true               ← frontend alone still demos the full flow
+```
+
+Never let a failure at one layer produce a blank screen. §20 applies throughout.
+
+## Where the time actually goes
+
+Budget generously for these; they are consistently underestimated:
+
+1. Building and embedding the corpus (Milestone 0)
+2. The stdin/stdout test harness and its driver template
+3. Judge0 authentication, rate limits, and result polling
+4. Making Gemini output conform reliably to a schema
+
+Budget lightly for the UI shell — mock data means it can be built in parallel
+from hour 2 and does not block anything.

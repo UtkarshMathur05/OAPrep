@@ -7,11 +7,25 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- gen_random_uuid()
 -- Known coding problems + their embeddings (the RAG corpus).
 CREATE TABLE IF NOT EXISTS problems (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug        TEXT UNIQUE NOT NULL,
+    leetcode_id INTEGER,
     title       TEXT NOT NULL,
     description TEXT NOT NULL,
-    platform    TEXT,
+    platform    TEXT DEFAULT 'leetcode',
     difficulty  TEXT,
     source_url  TEXT,
+    -- LeetCode topicTags: strong retrieval signal, maps onto the genome's
+    -- `concepts` and `data_structures` fields.
+    topics      TEXT[] NOT NULL DEFAULT '{}',
+    -- Company metadata from data/leetcode-companywise-interview-questions.
+    -- Lets the user narrow recall with "it was a Google question", and gives
+    -- reranking a popularity prior.
+    companies     TEXT[] NOT NULL DEFAULT '{}',
+    company_count INTEGER NOT NULL DEFAULT 0,
+    popularity    REAL    NOT NULL DEFAULT 0,   -- summed Frequency % across companies
+    acceptance    REAL,                          -- LeetCode acceptance rate, %
+    recency       TEXT,                          -- 30d | 3mo | 6mo | older
+    description_source TEXT,                     -- leetcode | gemini
     embedding   VECTOR(768),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -48,10 +62,12 @@ CREATE TABLE IF NOT EXISTS submissions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Company filter: `WHERE companies @> ARRAY['google']`.
+CREATE INDEX IF NOT EXISTS idx_problems_companies ON problems USING gin (companies);
+
 CREATE INDEX IF NOT EXISTS idx_test_cases_problem  ON test_cases(problem_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_problem ON submissions(problem_id);
 
--- Cosine-distance ANN index. Fine to create on an empty table for a hackathon
--- corpus; rebuild after a large bulk load if recall looks off.
-CREATE INDEX IF NOT EXISTS idx_problems_embedding
-    ON problems USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- No ANN index on purpose. At hackathon corpus size (500-5000 problems) an exact
+-- cosine scan is ~2ms, while ivfflat with the usual lists=100 measurably hurts
+-- recall. Add one only if the corpus grows past ~10k rows.

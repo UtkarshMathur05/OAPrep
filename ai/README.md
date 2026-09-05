@@ -6,6 +6,7 @@ Plain Python functions calling Gemini. No agent framework.
 
 | Step | Module | Prompt |
 | --- | --- | --- |
+| 0. Corpus build | `corpus/` (4 scripts) | — |
 | 1. Memory extraction | `extraction/genome.py` | `prompts/extraction_prompt.txt` |
 | 2. Problem Genome schema | `models/problem_genome.py` | — |
 | 3. Embeddings | `retrieval/embeddings.py` | — |
@@ -32,6 +33,12 @@ Run from the repo root so `import ai.*` resolves:
 ```bash
 python -c "from ai.extraction.genome import extract_genome; print(extract_genome('grid, move right or down, minimize cost'))"
 ```
+
+## Corpus first
+
+Steps 4–6 do nothing until the corpus exists. `corpus/` turns the CSVs in
+`data/` into embedded rows in Postgres — see [corpus/README.md](corpus/README.md).
+Run it before touching retrieval.
 
 ## Working independently
 

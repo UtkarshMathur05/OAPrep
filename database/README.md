@@ -16,7 +16,30 @@ docker compose down -v    # stop and DELETE the volume
 | File | Purpose |
 | --- | --- |
 | `init/01_schema.sql` | Tables, indexes, `vector` extension |
-| `init/02_seed.sql` | A handful of sample problems + test cases |
+| `init/02_seed.sql` | Five hand-written problems, so a bare clone isn't empty |
+| `init/03_corpus.sql` | The real embedded corpus — generated, committed |
+
+`03_corpus.sql` is produced by `python -m ai.corpus.load_corpus --dump` and is
+**not** hand-edited. If it is missing from your clone, run the pipeline in
+[ai/corpus/README.md](../ai/corpus/README.md).
+
+## The `problems` table
+
+Beyond the obvious columns it carries corpus metadata from
+`data/leetcode-companywise-interview-questions/`:
+
+| Column | Meaning |
+| --- | --- |
+| `slug` | LeetCode URL slug — the unique key every loader upserts on |
+| `topics` | LeetCode `topicTags`, e.g. `{Array,"Hash Table"}` |
+| `companies` | Lowercase company slugs that asked it |
+| `company_count` | How many — 126 for Two Sum |
+| `popularity` | Summed per-company `Frequency %`; the corpus ranking score |
+| `acceptance` | LeetCode acceptance rate, % |
+| `recency` | Most recent bucket it appeared in: `30d`/`3mo`/`6mo`/`older` |
+| `description_source` | `leetcode` (scraped) or `gemini` (gap-filled) |
+
+`companies` is GIN-indexed, so `WHERE companies @> ARRAY['google']` is cheap.
 
 Scripts in `init/` run **only when the `pgdata` volume is empty**. After editing
 them, re-run with `docker compose down -v && docker compose up -d`, or apply the
@@ -33,6 +56,12 @@ docker compose exec db psql -U recollect -d recollect
 ```
 
 `DATABASE_URL=postgresql://recollect:recollect@localhost:5432/recollect`
+
+## No vector index — on purpose
+
+There is no `ivfflat`/`hnsw` index on `problems.embedding`. At 1,200 rows an
+exact cosine scan is ~2ms, while an approximate index with the usual `lists=100`
+measurably *hurts* recall. Add one only past ~10k rows.
 
 ## Embedding dimension
 

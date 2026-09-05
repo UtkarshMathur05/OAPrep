@@ -44,21 +44,40 @@ Retrieve and rerank candidate problems for a genome.
 {
   "memory": { "concepts": ["grid", "dynamic programming"], "objective": "minimize cost" },
   "memory_id": "mock-memory-1",
-  "top_k": 5
+  "top_k": 5,
+  "companies": ["google"]
 }
 ```
+
+`companies` is optional. When present it filters the corpus *before* the vector
+search (`WHERE companies @> ARRAY[...]`), which is a large win: "it was a Google
+question" cuts 3,399 candidates to 2,325. Lowercase slugs, matching the directory
+names under `data/leetcode-companywise-interview-questions/`.
 
 **Response**
 ```json
 {
   "candidates": [
-    { "id": "123", "title": "Minimum Path Sum", "confidence": 0.91, "difficulty": "medium", "reason": "..." },
-    { "id": "456", "title": "Unique Paths",     "confidence": 0.72, "difficulty": "medium", "reason": "..." }
+    {
+      "id": "123",
+      "title": "Minimum Path Sum",
+      "confidence": 0.91,
+      "difficulty": "medium",
+      "topics": ["Array", "Dynamic Programming", "Matrix"],
+      "companies": ["amazon", "google", "microsoft"],
+      "company_count": 41,
+      "reason": "Grid with down/right moves, minimizing a sum."
+    }
   ]
 }
 ```
 
 `confidence` is 0.0–1.0, sorted descending.
+
+`topics`, `companies` and `company_count` come from the corpus and are there for
+the UI to render — "asked at Google, Amazon and 39 others" is a credible, free
+detail on a candidate card. `companies` is truncated to the top few by the
+backend; `company_count` is the true total.
 
 ---
 

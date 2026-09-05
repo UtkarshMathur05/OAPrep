@@ -32,3 +32,6 @@ Thumbs.db
 # Docker volumes / data dumps
 pgdata/
 *.dump
+
+# Corpus pipeline intermediates (regenerate with ai/corpus/)
+ai/corpus/out/

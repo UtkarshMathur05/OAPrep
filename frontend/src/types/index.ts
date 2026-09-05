@@ -24,6 +24,8 @@ export interface SearchRequest {
   memory: Genome
   memory_id?: string
   top_k?: number
+  /** Lowercase company slugs. Filters the corpus before the vector search. */
+  companies?: string[]
 }
 export interface Candidate {
   id: string
@@ -32,6 +34,10 @@ export interface Candidate {
   platform?: string | null
   difficulty?: string | null
   reason?: string | null
+  topics: string[]
+  /** Truncated for display — use company_count for the real total. */
+  companies: string[]
+  company_count: number
 }
 export interface SearchResponse {
   candidates: Candidate[]
