@@ -65,6 +65,45 @@ export interface ReconstructResponse {
   problem: Problem
 }
 
+// GET /problems
+export interface ProblemSummary {
+  id: string
+  slug: string
+  title: string
+  difficulty?: string | null
+  platform?: string | null
+  source_url?: string | null
+  topics: string[]
+  /** Truncated for display — use company_count for the real total. */
+  companies: string[]
+  company_count: number
+  popularity: number
+  acceptance?: number | null
+  recency?: string | null
+}
+
+/** GET /problems/{id} — accepts a UUID or a slug. */
+export interface ProblemDetail extends ProblemSummary {
+  description: string
+  has_embedding: boolean
+  test_case_count: number
+}
+
+export interface ProblemListResponse {
+  total: number
+  limit: number
+  offset: number
+  problems: ProblemSummary[]
+}
+
+export interface ProblemListParams {
+  limit?: number
+  offset?: number
+  difficulty?: string
+  company?: string
+  search?: string
+}
+
 // POST /verify
 export interface VerifyRequest {
   problem_id: string

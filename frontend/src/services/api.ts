@@ -4,6 +4,7 @@
 
 import axios from 'axios'
 import type {
+  ProblemDetail, ProblemListParams, ProblemListResponse,
   MemoryRequest, MemoryResponse,
   SearchRequest, SearchResponse,
   ReconstructRequest, ReconstructResponse,
@@ -11,6 +12,7 @@ import type {
 } from '../types'
 import {
   mockMemoryResponse, mockSearchResponse, mockReconstructResponse, mockVerifyResponse,
+  mockProblemList, mockProblemDetail,
 } from '../data/mockData'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
@@ -38,6 +40,19 @@ export async function searchCandidates(body: SearchRequest): Promise<SearchRespo
 export async function reconstructProblem(body: ReconstructRequest): Promise<ReconstructResponse> {
   if (USE_MOCK) return mock(mockReconstructResponse)
   const { data } = await client.post<ReconstructResponse>('/reconstruct', body)
+  return data
+}
+
+export async function listProblems(params: ProblemListParams = {}): Promise<ProblemListResponse> {
+  if (USE_MOCK) return mock(mockProblemList)
+  const { data } = await client.get<ProblemListResponse>('/problems', { params })
+  return data
+}
+
+/** Accepts a UUID or a slug, e.g. getProblem('two-sum'). */
+export async function getProblem(idOrSlug: string): Promise<ProblemDetail> {
+  if (USE_MOCK) return mock(mockProblemDetail)
+  const { data } = await client.get<ProblemDetail>(`/problems/${idOrSlug}`)
   return data
 }
 

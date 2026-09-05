@@ -136,10 +136,61 @@ Supported `language` values: `python`, `java`, `cpp`, `c`, `javascript`, `typesc
 
 ---
 
-## GET /problems · GET /problems/{id}
+## GET /problems
 
-Browse the known-problem corpus. Returns the same `problem` object shape as
-`/reconstruct` (a bare object, or an array for the list form).
+Browse the known-problem corpus.
+
+**Query parameters** — all optional:
+
+| Param | Default | Notes |
+| --- | --- | --- |
+| `limit` | 20 | 1–100 |
+| `offset` | 0 | pagination |
+| `difficulty` | — | `easy` / `medium` / `hard` |
+| `company` | — | lowercase slug, e.g. `google`; GIN-indexed |
+| `search` | — | case-insensitive title match |
+
+Ordered by `popularity` descending — the corpus ranking, so the most commonly
+asked problems come first.
+
+**Response**
+```json
+{
+  "total": 1200,
+  "limit": 20,
+  "offset": 0,
+  "problems": [
+    {
+      "id": "1fa55ea2-04b0-477d-ac38-8605a476e032",
+      "slug": "minimum-path-sum",
+      "title": "Minimum Path Sum",
+      "difficulty": "medium",
+      "platform": "leetcode",
+      "source_url": "https://leetcode.com/problems/minimum-path-sum/",
+      "topics": ["Array", "Dynamic Programming", "Matrix"],
+      "companies": ["amazon", "google", "microsoft"],
+      "company_count": 41,
+      "popularity": 812.5,
+      "acceptance": 64.1,
+      "recency": "3mo"
+    }
+  ]
+}
+```
+
+`total` is the count matching the filters, not the page size.
+
+## GET /problems/{id}
+
+Accepts **either a UUID or a slug**, so `/problems/two-sum` works.
+
+Returns one `ProblemSummary` plus `description`, `has_embedding` (whether it is
+searchable yet) and `test_case_count`. `404` with `{"detail": "..."}` when absent.
+
+> This is **not** the same shape as `/reconstruct`'s `problem`. A corpus row is
+> stored text; a reconstructed problem carries `constraints`, `examples` and
+> `confidence`, which Gemini produces at reconstruct time and which are not
+> columns. Two shapes, deliberately.
 
 ## GET /health
 
