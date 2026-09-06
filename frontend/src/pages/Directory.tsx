@@ -46,7 +46,7 @@ export default function Directory({ axis }: { axis: 'company' | 'topic' }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-reading">
           <h1 className="text-h2">{copy.heading}</h1>
-          <p className="mt-1.5 text-small text-muted">{copy.blurb}</p>
+          <p className="mt-1.5 text-small text-ink2">{copy.blurb}</p>
         </div>
         <input
           value={q}
@@ -62,27 +62,27 @@ export default function Directory({ axis }: { axis: 'company' | 'topic' }) {
         </p>
       )}
 
-      <div className="mt-6 grid gap-px border border-ruleStrong bg-ruleStrong sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-px border border-lineStrong bg-lineStrong sm:grid-cols-2 lg:grid-cols-3">
         {(items === null ? Array.from({ length: 12 }) : filtered).map((item, i) => {
           const facet = item as Facet | undefined
-          if (!facet) return <div key={i} className="h-[2.75rem] animate-pulse bg-surface" />
+          if (!facet) return <div key={i} className="h-[2.75rem] animate-pulse bg-panel" />
           return (
             <Link
               key={facet.name}
               to={`/problems?${axis}=${encodeURIComponent(facet.name)}`}
-              className="group flex items-baseline justify-between gap-3 bg-surface px-4 py-3 transition-colors hover:bg-paper"
+              className="group flex items-baseline justify-between gap-3 bg-panel px-4 py-3 transition-colors hover:bg-ground"
             >
               <span className={`truncate text-small ${axis === 'company' ? 'capitalize' : ''} group-hover:underline`}>
                 {facet.name}
               </span>
-              <span className="num shrink-0 font-mono text-micro text-faint">{facet.count}</span>
+              <span className="num shrink-0 font-mono text-micro text-ink3">{facet.count}</span>
             </Link>
           )
         })}
       </div>
 
       {items !== null && filtered.length === 0 && (
-        <p className="mt-6 text-small text-muted">Nothing matches “{q}”.</p>
+        <p className="mt-6 text-small text-ink2">Nothing matches “{q}”.</p>
       )}
     </div>
   )

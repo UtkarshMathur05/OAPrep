@@ -67,7 +67,7 @@ export default function Contribute() {
     <div className="shell py-12">
       <div className="max-w-3xl">
       <h1 className="text-h1">Add a problem we're missing</h1>
-      <p className="mt-3 max-w-reading text-lede text-shadowGrey">
+      <p className="mt-3 max-w-reading text-lede text-ink2">
         Describe it the same way you would in recall. We check the corpus first —
         if we already have it, your description raises that problem's confidence
         instead of creating a near-duplicate.
@@ -88,11 +88,11 @@ export default function Contribute() {
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             placeholder="you were given a list of tasks with cooldowns and had to schedule them so the total time was minimal…"
-            className="mt-2 w-full resize-y border border-prussianBlue bg-surface px-4 py-3 text-base leading-relaxed
-                       placeholder:text-faint focus:outline-none"
+            className="mt-2 w-full resize-y border border-lineStrong bg-panel px-4 py-3 text-base leading-relaxed
+                       placeholder:text-ink3 focus:outline-none"
           />
           <div className="mt-3 flex items-center justify-between gap-4">
-            <p className="font-mono text-micro text-faint">
+            <p className="font-mono text-micro text-ink3">
               {transcript.trim().length < 20 ? 'a sentence or two, at least' : ' '}
             </p>
             <button onClick={runMatch} disabled={busy || transcript.trim().length < 20} className="btn-accent">
@@ -116,20 +116,20 @@ export default function Contribute() {
           </h2>
 
           {likelyDuplicate && (
-            <p className="mb-3 border border-amberEarth/40 border-l-2 border-l-amberEarth bg-amberEarth/10 px-4 py-2.5 text-small text-shadowGrey">
+            <p className="mb-3 border border-medium/40 border-l-2 border-l-medium bg-medium/10 px-4 py-2.5 text-small text-ink2">
               The top match is close enough that this is probably the same problem.
             </p>
           )}
 
-          <ul className="divide-y divide-rule border border-rule bg-surface">
+          <ul className="divide-y divide-line border border-line bg-panel">
             {candidates.map((c, i) => (
               <li key={c.id} className="flex items-baseline gap-4 px-4 py-3">
-                <span className="num w-12 shrink-0 font-mono text-small text-muted">
+                <span className="num w-12 shrink-0 font-mono text-small text-ink2">
                   {Math.round(c.confidence * 100)}%
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{c.title}</p>
-                  {c.reason && <p className="mt-0.5 text-small text-muted">{c.reason}</p>}
+                  {c.reason && <p className="mt-0.5 text-small text-ink2">{c.reason}</p>}
                 </div>
                 {/* When retrieval is confident, confirming is the right action,
                     so it gets the emphasis — not "add it anyway". */}
@@ -143,7 +143,7 @@ export default function Contribute() {
               </li>
             ))}
             {!candidates.length && (
-              <li className="px-4 py-5 text-small text-muted">
+              <li className="px-4 py-5 text-small text-ink2">
                 No candidate came back above the retrieval threshold. That is a good
                 sign for contributing.
               </li>
@@ -151,7 +151,7 @@ export default function Contribute() {
           </ul>
 
           <div className="mt-5 flex items-center justify-between">
-            <button onClick={() => setStep('describe')} className="font-mono text-micro text-muted link">
+            <button onClick={() => setStep('describe')} className="font-mono text-micro text-ink2 link">
               edit my description
             </button>
             <button
@@ -167,7 +167,7 @@ export default function Contribute() {
       {step === 'details' && (
         <div className="mt-8 animate-rise">
           <h2 className="text-h3">A few more details</h2>
-          <p className="mt-1.5 max-w-reading text-small text-muted">
+          <p className="mt-1.5 max-w-reading text-small text-ink2">
             All optional. Anything you leave blank gets inferred when we write the
             statement up, and every inference is listed on the problem page rather
             than presented as fact.
@@ -213,7 +213,7 @@ export default function Contribute() {
           </div>
 
           <div className="mt-6 flex items-center justify-between">
-            <button onClick={() => setStep('match')} className="font-mono text-micro text-muted link">
+            <button onClick={() => setStep('match')} className="font-mono text-micro text-ink2 link">
               back to matches
             </button>
             <button onClick={() => send()} disabled={busy} className="btn-primary">
@@ -224,12 +224,12 @@ export default function Contribute() {
       )}
 
       {step === 'done' && result && (
-        <div className="mt-8 animate-rise border border-ruleStrong bg-surface p-6">
+        <div className="mt-8 animate-rise border border-lineStrong bg-panel p-6">
           <p className="label">{result.action === 'created' ? 'added' : 'corroborated'}</p>
           <h2 className="mt-1 text-h2">{result.title}</h2>
-          <p className="mt-3 max-w-reading text-small text-shadowGrey">{result.message}</p>
+          <p className="mt-3 max-w-reading text-small text-ink2">{result.message}</p>
 
-          <div className="mt-5 flex items-baseline gap-6 border-y border-rule py-4">
+          <div className="mt-5 flex items-baseline gap-6 border-y border-line py-4">
             <Stat label="Confidence" value={`${Math.round(result.confidence * 100)}%`} />
             <Stat label="Descriptions" value={String(result.contribution_count)} />
             <Stat label="Test cases" value={String(result.test_case_count)} />

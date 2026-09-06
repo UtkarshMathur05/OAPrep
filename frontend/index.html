@@ -18,6 +18,12 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap"
       rel="stylesheet"
     />
+    <meta name="color-scheme" content="dark" />
+    <style>
+      /* Paint the editor ground before the bundle lands, so a slow first load
+         is a dark screen rather than a white flash. */
+      html, body { background: #101219; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

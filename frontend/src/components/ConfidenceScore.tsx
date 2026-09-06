@@ -9,20 +9,20 @@ interface Props {
 export default function ConfidenceScore({ value, variant = 'bar' }: Props) {
   const pct = Math.round((value ?? 0) * 100)
   // Low confidence is amber, not red: it means "unsure", not "wrong".
-  const tone = pct >= 70 ? 'bg-brownRed' : 'bg-amberEarth'
+  const tone = pct >= 70 ? 'bg-accent' : 'bg-accent'
 
   if (variant === 'figure') {
     return (
       <div className="flex items-baseline gap-2">
         <span className="font-mono text-3xl leading-none tabular-nums">{pct}</span>
-        <span className="text-sm text-muted">% match</span>
+        <span className="text-sm text-ink2">% match</span>
       </div>
     )
   }
 
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1 w-16 bg-rule" role="presentation">
+      <div className="h-1 w-16 bg-line" role="presentation">
         <div className={`h-full ${tone}`} style={{ width: `${pct}%` }} />
       </div>
       <span className="w-9 font-mono text-sm tabular-nums text-right">{pct}%</span>

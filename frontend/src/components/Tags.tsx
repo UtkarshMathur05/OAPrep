@@ -10,9 +10,9 @@ const DIFFICULTY_COLOR: Record<string, string> = {
 /** Difficulty as coloured text, not a filled pill. In a table of 50 rows,
  *  50 pills is noise; the word alone carries it. */
 export function Difficulty({ value }: { value?: string | null }) {
-  if (!value) return <span className="text-faint">—</span>
+  if (!value) return <span className="text-ink3">—</span>
   return (
-    <span className={`font-mono text-small ${DIFFICULTY_COLOR[value] ?? 'text-muted'}`}>
+    <span className={`font-mono text-small ${DIFFICULTY_COLOR[value] ?? 'text-ink2'}`}>
       {value[0].toUpperCase() + value.slice(1)}
     </span>
   )
@@ -26,13 +26,13 @@ export function Difficulty({ value }: { value?: string | null }) {
  * column without your eye having to re-find the baseline.
  */
 export function Companies({ names, total, max = 2 }: { names: string[]; total: number; max?: number }) {
-  if (!names.length) return <span className="text-faint">—</span>
+  if (!names.length) return <span className="text-ink3">—</span>
   const shown = names.slice(0, max).map(title).join(', ')
   const rest = total - Math.min(names.length, max)
   return (
-    <span className="block truncate text-small text-muted">
+    <span className="block truncate text-small text-ink2">
       {shown}
-      {rest > 0 && <span className="text-faint"> +{rest}</span>}
+      {rest > 0 && <span className="text-ink3"> +{rest}</span>}
     </span>
   )
 }
@@ -71,7 +71,7 @@ export function Confidence({ problem }: { problem: Pick<ProblemSummary, 'origin'
   const pct = Math.round(problem.confidence * 100)
   return (
     <span
-      className="ml-2 inline-flex items-baseline gap-1.5 border border-amberEarth/40 bg-amberEarth/10 px-1.5 py-0.5"
+      className="ml-2 inline-flex items-baseline gap-1.5 border border-medium/40 bg-medium/15 px-1.5 py-0.5"
       title={`Described by ${problem.contribution_count} ${problem.contribution_count === 1 ? 'person' : 'people'}. Confidence rises with each independent account.`}
     >
       <span className="num font-mono text-micro text-medium">{pct}%</span>
@@ -94,12 +94,12 @@ export function title(slug: string) {
  * column does, which is what a reader is actually comparing.
  */
 export function TopicsInline({ names, max = 2 }: { names: string[]; max?: number }) {
-  if (!names.length) return <span className="text-faint">—</span>
+  if (!names.length) return <span className="text-ink3">—</span>
   const rest = names.length - max
   return (
-    <span className="block truncate font-mono text-micro text-muted">
+    <span className="block truncate font-mono text-micro text-ink2">
       {names.slice(0, max).join(' · ')}
-      {rest > 0 && <span className="text-faint"> +{rest}</span>}
+      {rest > 0 && <span className="text-ink3"> +{rest}</span>}
     </span>
   )
 }

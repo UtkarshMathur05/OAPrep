@@ -262,12 +262,42 @@ be the code.
 
 ### Design system
 
+The whole site is the code editor's chrome. It is dark, and the ramp is anchored
+on the brand's own dark end — `shadowGrey` and `prussianBlue` were always the
+bottom of that palette, so they became surfaces rather than being replaced.
+
+| Token | | Job |
+| --- | --- | --- |
+| `ground` | `#101219` | the page, and the Monaco background |
+| `panel` | `#171A24` | cards, tables, the hero band |
+| `raised` | `#1E212B` | shadowGrey — inputs, hover, chips |
+| `select` | `#191D32` | prussianBlue — selected row, active filter |
+| `line` / `lineStrong` | `#262A36` / `#343947` | hairlines |
+| `ink` / `ink2` / `ink3` | `#E6E8EF` / `#A2A8BC` / `#858CA2` | text |
+
+**Colour carries meaning, and each one means one thing.** `accent` (amberEarth,
+`#E98A15`) is the action and the thing running right now — the Run button, the
+submit, the active tab, the cursor. Nothing else. Links are `link` blue.
+Uncertainty and community confidence are `medium` yellow, deliberately *not*
+amber, so a caveat never competes with a button.
+
+Difficulty and pass/fail borrow an editor's token colours — `easy` is the same
+green as a string literal, `hard` the same red as an error — and
+`src/lib/monacoTheme.ts` paints Monaco in exactly those values, so a keyword and
+an "Easy" tag are literally the same colour. That is why the editor reads as
+part of the page rather than a window pasted onto it.
+
 IBM Plex Mono is the interface chrome (nav, buttons, labels, counts, table
 heads, metadata); IBM Plex Sans carries prose. One named type scale — `micro
 tiny small base lede h3 h2 h1 display` — and one component vocabulary in
 `src/index.css` (`.shell .band .label .btn-* .card .chip .field .th .td`). Use
-those rather than Tailwind's default sizes, or screens stop matching each other.
-Rules, never shadows; square corners; one loud element per screen.
+those rather than Tailwind's default sizes or raw hexes, or screens stop
+matching each other. Rules, never shadows; square corners; one loud element per
+screen.
+
+`ink3` sits at `#858CA2` rather than something dimmer because it carries the
+11px labels — the smallest text on the site — and anything darker fell under
+4.5:1 on a raised panel.
 
 ---
 

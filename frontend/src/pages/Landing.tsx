@@ -55,23 +55,23 @@ export default function Landing() {
   return (
     <>
       {/* ---------------------------------------------------------- hero */}
-      <section className="border-b border-rule bg-floralWhite py-band-sm sm:py-20">
+      <section className="border-b border-line bg-panel py-band-sm sm:py-20">
         <div className="shell">
           <h1 className="max-w-[24ch] text-h1 sm:text-display">
             Recall the coding problem you can't quite name.
           </h1>
-          <p className="mt-5 max-w-[58ch] text-lede text-shadowGrey">
+          <p className="mt-5 max-w-[58ch] text-lede text-ink2">
             Describe whatever stuck — the shape of the input, what you had to
             return, a constraint you half remember. We rebuild the problem, and
             keep what you actually remembered separate from what we inferred.
           </p>
 
-          <div className="mt-8 max-w-[52rem] border border-prussianBlue bg-surface">
+          <div className="mt-8 max-w-[52rem] border border-lineStrong bg-panel transition-colors focus-within:border-accent">
             <label htmlFor="recall" className="sr-only">
               What do you remember about the problem?
             </label>
             <div className="flex gap-3 px-4 pt-4">
-              <span aria-hidden className="select-none font-mono text-base text-brownRed">
+              <span aria-hidden className="select-none font-mono text-base text-accent">
                 &gt;
               </span>
               <textarea
@@ -84,11 +84,11 @@ export default function Landing() {
                 rows={3}
                 placeholder="a grid where you could only move right or down, and you had to minimise the total…"
                 className="w-full resize-none bg-transparent text-base leading-relaxed
-                           placeholder:text-faint focus:outline-none"
+                           placeholder:text-ink3 focus:outline-none"
               />
             </div>
-            <div className="mt-2 flex items-center justify-between border-t border-rule px-3 py-2">
-              <span className="font-mono text-micro text-faint">⌘↵ to search 1,124 problems</span>
+            <div className="mt-2 flex items-center justify-between border-t border-line px-3 py-2">
+              <span className="font-mono text-micro text-ink3">⌘↵ to search 1,124 problems</span>
               <button
                 onClick={() => start(transcript)}
                 disabled={!transcript.trim()}
@@ -112,16 +112,16 @@ export default function Landing() {
 
       {/* ------------------------------------------------------ pipeline */}
       {/* Genuinely a sequence, which is the only thing that earns numbering. */}
-      <section className="border-b border-rule bg-surface">
+      <section className="border-b border-line bg-panel">
         <div className="shell">
-          <ol className="grid divide-y divide-rule sm:grid-cols-5 sm:divide-x sm:divide-y-0">
+          <ol className="grid divide-y divide-line sm:grid-cols-5 sm:divide-x sm:divide-y-0">
             {PIPELINE.map(([name, detail], i) => (
               <li key={name} className="py-5 sm:px-4 sm:first:pl-0 sm:last:pr-0">
-                <p className="font-mono text-micro text-faint">
+                <p className="font-mono text-micro text-ink3">
                   {String(i + 1).padStart(2, '0')}
                 </p>
                 <p className="mt-1.5 font-mono text-small font-medium">{name}</p>
-                <p className="mt-1 text-tiny leading-relaxed text-muted">{detail}</p>
+                <p className="mt-1 text-tiny leading-relaxed text-ink2">{detail}</p>
               </li>
             ))}
           </ol>
@@ -134,7 +134,7 @@ export default function Landing() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="text-h2">The corpus underneath</h2>
-              <p className="mt-1.5 max-w-reading text-small text-muted">
+              <p className="mt-1.5 max-w-reading text-small text-ink2">
                 Real LeetCode statements, tagged with the companies that ask them
                 across 41,546 reported question–company pairs. Recall searches
                 this; so can you.
@@ -165,19 +165,19 @@ export default function Landing() {
                 <col className="w-[12%]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-rule">
+                <tr className="border-b border-line">
                   <th className="th">most asked</th>
                   <th className="th">difficulty</th>
                   <th className="th">topics</th>
                   <th className="th text-right">companies</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rule">
+              <tbody className="divide-y divide-line">
                 {(top.length ? top : Array.from({ length: 8 })).map((row, i) => {
                   const p = row as ProblemSummary | undefined
                   if (!p) return <tr key={i}><td className="td h-[2.9rem]" colSpan={4} /></tr>
                   return (
-                    <tr key={p.id} className="group hover:bg-paper">
+                    <tr key={p.id} className="group hover:bg-ground">
                       <td className="td">
                         <Link to={`/problems/${p.slug}`} className="block truncate group-hover:underline">
                           {p.title}
@@ -185,7 +185,7 @@ export default function Landing() {
                       </td>
                       <td className="td"><Difficulty value={p.difficulty} /></td>
                       <td className="td"><TopicsInline names={p.topics} max={2} /></td>
-                      <td className="num td text-right font-mono text-small text-muted">
+                      <td className="num td text-right font-mono text-small text-ink2">
                         {p.company_count}
                       </td>
                     </tr>
@@ -227,7 +227,7 @@ export default function Landing() {
         <div className="shell flex flex-wrap items-center justify-between gap-6">
           <div className="max-w-reading">
             <h2 className="text-h3">We don't have it? Describe it anyway.</h2>
-            <p className="mt-1.5 text-small text-muted">
+            <p className="mt-1.5 text-small text-ink2">
               Contributing runs the same search first. If we already have the
               problem you get told so and your account raises its confidence; if
               we don't, we write it up, generate test cases, and store it as a
@@ -254,25 +254,25 @@ function Rail({
   return (
     <div>
       <h2 className="text-h3">{title}</h2>
-      <p className="mt-1.5 max-w-reading text-small text-muted">{note}</p>
-      <ul className="mt-4 border-t border-rule">
+      <p className="mt-1.5 max-w-reading text-small text-ink2">{note}</p>
+      <ul className="mt-4 border-t border-line">
         {(items.length ? items : Array.from({ length: 8 })).map((item, i) => {
           const f = item as { name: string; count: number } | undefined
-          if (!f) return <li key={i} className="h-8 border-b border-rule" />
+          if (!f) return <li key={i} className="h-8 border-b border-line" />
           return (
-            <li key={f.name} className="border-b border-rule">
+            <li key={f.name} className="border-b border-line">
               <Link
                 to={href(f.name)}
-                className="flex items-baseline justify-between gap-3 py-1.5 transition-colors hover:text-brownRed"
+                className="flex items-baseline justify-between gap-3 py-1.5 transition-colors hover:text-accent"
               >
                 <span className={`text-small ${capitalize ? 'capitalize' : ''}`}>{f.name}</span>
-                <span className="num font-mono text-micro text-faint">{f.count}</span>
+                <span className="num font-mono text-micro text-ink3">{f.count}</span>
               </Link>
             </li>
           )
         })}
       </ul>
-      <Link to={all.to} className="mt-3 inline-block font-mono text-micro text-brownRed link">
+      <Link to={all.to} className="mt-3 inline-block font-mono text-micro text-link link">
         {all.label}
       </Link>
     </div>

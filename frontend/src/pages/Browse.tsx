@@ -120,7 +120,7 @@ export default function Browse() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-h2">Problems</h1>
-            <p className="mt-1.5 text-small text-muted">
+            <p className="mt-1.5 text-small text-ink2">
               <span className="num font-mono">{total.toLocaleString()}</span>{' '}
               {total === 1 ? 'problem' : 'problems'}
               {active.length > 0 && ' matching your filters'}
@@ -163,17 +163,17 @@ export default function Browse() {
                   if (f.key === 'search') setDraftSearch('')
                   setFilter(f.key, '')
                 }}
-                className="inline-flex items-center gap-2 border border-ruleStrong bg-surface px-2 py-0.5
-                           font-mono text-micro capitalize hover:border-brownRed hover:text-brownRed"
+                className="inline-flex items-center gap-2 border border-lineStrong bg-panel px-2 py-0.5
+                           font-mono text-micro capitalize hover:border-accent hover:text-accent"
               >
                 {f.label}
-                <span aria-hidden className="text-faint">×</span>
+                <span aria-hidden className="text-ink3">×</span>
                 <span className="sr-only">Remove filter</span>
               </button>
             ))}
             <button
               onClick={() => { setDraftSearch(''); setParams(new URLSearchParams()) }}
-              className="px-1 font-mono text-micro text-faint link hover:text-prussianBlue"
+              className="px-1 font-mono text-micro text-ink3 link hover:text-ink"
             >
               Clear all
             </button>
@@ -199,7 +199,7 @@ export default function Browse() {
             >
               Previous
             </button>
-            <span className="num font-mono text-micro text-faint">
+            <span className="num font-mono text-micro text-ink3">
               {offset + 1}–{Math.min(offset + PAGE, total)} of {total.toLocaleString()}
             </span>
             <button
@@ -231,8 +231,8 @@ function FacetGroup({
   const shown = limit && !expanded ? items.slice(0, limit) : items
 
   return (
-    <div className="mb-7 border-t border-rule pt-4 first:border-t-0 first:pt-0">
-      <h2 className="mb-2 font-mono text-micro text-faint">{title}</h2>
+    <div className="mb-7 border-t border-line pt-4 first:border-t-0 first:pt-0">
+      <h2 className="mb-2 font-mono text-micro text-ink3">{title}</h2>
       <ul className="space-y-0.5">
         {shown.map((item) => {
           const isOn = selected === item.name
@@ -242,10 +242,10 @@ function FacetGroup({
                 onClick={() => onSelect(isOn ? '' : item.name)}
                 aria-pressed={isOn}
                 className={`flex w-full items-baseline justify-between gap-2 px-2 py-1 text-left text-small transition-colors
-                  ${isOn ? 'bg-prussianBlue text-white' : 'hover:bg-surface'}`}
+                  ${isOn ? 'bg-select text-ink' : 'hover:bg-raised hover:text-ink'}`}
               >
                 <span className={`truncate ${capitalize ? 'capitalize' : ''}`}>{item.name}</span>
-                <span className={`num font-mono text-micro ${isOn ? 'text-white/60' : 'text-faint'}`}>
+                <span className={`num font-mono text-micro ${isOn ? 'text-ink2' : 'text-ink3'}`}>
                   {item.count}
                 </span>
               </button>
@@ -256,13 +256,13 @@ function FacetGroup({
       {limit && items.length > limit && (
         <button
           onClick={() => setExpanded((e) => !e)}
-          className="mt-1 px-2 font-mono text-micro text-muted link hover:text-prussianBlue"
+          className="mt-1 px-2 font-mono text-micro text-ink2 link hover:text-ink"
         >
           {expanded ? 'Show fewer' : `Show ${items.length - limit} more`}
         </button>
       )}
       {more && (
-        <Link to={more.to} className="mt-1 block px-2 font-mono text-micro text-brownRed link">
+        <Link to={more.to} className="mt-1 block px-2 font-mono text-micro text-link link">
           {more.label}
         </Link>
       )}

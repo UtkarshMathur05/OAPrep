@@ -19,7 +19,7 @@ interface Props {
 export default function CandidateList({ candidates, onSelect }: Props) {
   if (candidates.length === 0) {
     return (
-      <p className="card p-6 text-small text-muted">
+      <p className="card p-6 text-small text-ink2">
         No problem matched that memory closely enough. Add another detail — a
         constraint, an example, or what the answer looked like.
       </p>
@@ -37,7 +37,7 @@ export default function CandidateList({ candidates, onSelect }: Props) {
           <col className="w-[19%]" />
         </colgroup>
         <thead>
-          <tr className="border-b border-rule">
+          <tr className="border-b border-line">
             <th scope="col" className="th">problem</th>
             <th scope="col" className="th">match</th>
             <th scope="col" className="th hidden sm:table-cell">difficulty</th>
@@ -45,13 +45,13 @@ export default function CandidateList({ candidates, onSelect }: Props) {
             <th scope="col" className="th text-right">asked at</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-rule">
+        <tbody className="divide-y divide-line">
           {candidates.map((c, i) => (
-            <tr key={c.id} className={i === 0 ? 'bg-floralWhite/60' : undefined}>
+            <tr key={c.id} className={i === 0 ? 'bg-raised/60' : undefined}>
               <td className="td">
                 <div className="font-medium">{c.title}</div>
                 {c.reason && (
-                  <p className="mt-1 text-tiny leading-relaxed text-muted">{c.reason}</p>
+                  <p className="mt-1 text-tiny leading-relaxed text-ink2">{c.reason}</p>
                 )}
                 <button
                   onClick={() => onSelect(c)}

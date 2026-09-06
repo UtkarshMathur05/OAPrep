@@ -31,14 +31,14 @@ export default function Timer({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <span
-        className={`num font-mono text-sm ${running ? 'text-amberEarth' : 'text-faint'}`}
+        className={`num font-mono text-sm ${running ? 'text-accent' : 'text-ink3'}`}
         aria-label={`Elapsed time ${mm} minutes ${ss} seconds`}
       >
         {mm}:{ss}
       </span>
       <button
         onClick={() => setRunning((r) => !r)}
-        className="text-micro text-faint underline-offset-2 hover:text-white hover:underline"
+        className="text-micro text-ink3 underline-offset-2 hover:text-ink hover:underline"
       >
         {running ? 'Pause' : 'Resume'}
       </button>

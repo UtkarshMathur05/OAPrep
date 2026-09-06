@@ -4,41 +4,50 @@ export default {
   theme: {
     extend: {
       colors: {
-        // --- Brand ---------------------------------------------------------
-        // The five originals, unchanged in value. What changed is their job.
-        // Cream as the whole page ground made a dense, table-driven tool read
-        // like an editorial site; it is now the accent surface (hero, callouts,
-        // the recall feature) against a cool near-white.
-        brownRed: '#9E2B25',      // the recall feature: memory, reconstruction
-        amberEarth: '#E98A15',    // live state: the timer, community confidence
-        floralWhite: '#FFF8F0',   // accent ground, not the page
-        prussianBlue: '#191D32',  // ink and primary action
-        shadowGrey: '#1E212B',    // secondary text
+        // --- Ground ---------------------------------------------------------
+        // An editor's chrome, anchored on the brand's own dark end: shadowGrey
+        // and prussianBlue were always the bottom of this palette, so they
+        // become surfaces rather than being replaced.
+        ground:     '#101219',  // the page
+        panel:      '#171A24',  // cards, tables, the editor's side panels
+        raised:     '#1E212B',  // shadowGrey — headers, hover, hero band
+        select:     '#191D32',  // prussianBlue — the selected row / active filter
 
-        // --- Ground --------------------------------------------------------
-        paper: '#FAFAFB',         // the page
-        surface: '#FFFFFF',       // cards, rows, panels
+        line:       '#262A36',
+        lineStrong: '#343947',
 
-        // Rules are cool greys now that the ground is cool. Not black at low
-        // alpha — over a white table that greys out the text behind it.
-        rule: '#E6E7EC',
-        ruleStrong: '#CFD2DB',
-        muted: '#63677A',
-        faint: '#8B8FA3',
+        // --- Text -----------------------------------------------------------
+        ink:  '#E6E8EF',  // primary. 14.8:1 on bg
+        ink2: '#A2A8BC',  // secondary prose and metadata. 7.4:1
+        // #6B7288 looked right but sat at 3.4:1 on a raised panel, and this
+        // tone carries the 11px labels — the smallest text on the site, where
+        // contrast matters most. Lifted until it clears 4.5:1 everywhere.
+        ink3: '#858CA2',  // labels, counts, things you read only when looking
 
-        // --- Difficulty ----------------------------------------------------
-        // A browse UI needs these to be instantly separable at 11px. Chosen to
-        // clear 4.5:1 on white and to stay distinct in greyscale.
-        easy: '#1A7F5A',
-        medium: '#B26A00',
-        hard: '#B3261E',
+        // --- Accent ---------------------------------------------------------
+        // One action colour, and it is the Run button's: amberEarth. Loud on a
+        // dark ground, so it stays rationed to one element per screen.
+        accent:    '#E98A15',
+        accentDim: '#7A4A0C',
+        // brownRed lifted off the floor — #9E2B25 is nearly invisible on #101219.
+        brand:     '#C4483F',
 
-        // --- Editor --------------------------------------------------------
-        // The solve screen inverts: full-bleed dark, so code is the only bright
-        // thing on the display.
-        deep: '#12141C',
-        deepPanel: '#191C26',
-        deepRule: '#2B2F3D',
+        // --- Syntax ---------------------------------------------------------
+        // Difficulty, pass/fail and links borrow an editor's token colours. On
+        // a screen full of code this is the palette the reader is already
+        // parsing, so it carries meaning instead of decorating.
+        easy:   '#98C379',  // string green — also "passed"
+        medium: '#E5C07B',  // constant yellow — also "uncertain"
+        hard:   '#E06C75',  // error red — also "failed"
+        link:   '#61AFEF',  // function blue
+
+        // --- Legacy brand ---------------------------------------------------
+        // Kept so nothing referencing them breaks. Do not use on dark surfaces.
+        brownRed: '#9E2B25',
+        amberEarth: '#E98A15',
+        floralWhite: '#FFF8F0',
+        prussianBlue: '#191D32',
+        shadowGrey: '#1E212B',
       },
       fontFamily: {
         // Prose only: headlines, problem statements, paragraph copy.

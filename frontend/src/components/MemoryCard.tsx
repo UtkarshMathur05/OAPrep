@@ -31,7 +31,7 @@ export default function MemoryCard({
 
   return (
     <div className="card">
-      <dl className="divide-y divide-rule">
+      <dl className="divide-y divide-line">
         {present.map(([label, items]) => (
           <div key={label} className="grid grid-cols-[7.5rem_1fr] gap-3 px-4 py-2.5">
             <dt className="label pt-0.5">{label}</dt>
@@ -41,14 +41,14 @@ export default function MemoryCard({
               {items.map((item, i) => (
                 <span key={item}>
                   {item}
-                  {i < items.length - 1 && <span className="text-faint">,&nbsp;</span>}
+                  {i < items.length - 1 && <span className="text-ink3">,&nbsp;</span>}
                 </span>
               ))}
             </dd>
           </div>
         ))}
         {present.length === 0 && (
-          <div className="px-4 py-6 text-small text-muted">
+          <div className="px-4 py-6 text-small text-ink2">
             Nothing concrete came through. Try naming the shape of the data, or
             what you were asked to return.
           </div>
@@ -56,11 +56,11 @@ export default function MemoryCard({
       </dl>
 
       {!ledgerOnly && unsure.length > 0 && (
-        <div className="border-t border-ruleStrong bg-amberEarth/[0.07] px-4 py-3">
+        <div className="border-t border-lineStrong bg-medium/[0.07] px-4 py-3">
           <p className="label text-medium">not sure</p>
           <ul className="mt-1.5 space-y-1">
             {unsure.map((item) => (
-              <li key={item} className="font-mono text-small text-shadowGrey">{item}</li>
+              <li key={item} className="font-mono text-small text-ink2">{item}</li>
             ))}
           </ul>
         </div>
@@ -78,26 +78,26 @@ export default function MemoryCard({
  */
 export function UncertaintyPanel({ items }: { items: string[] }) {
   return (
-    <div className="border border-amberEarth/40 bg-amberEarth/[0.07]">
-      <p className="border-b border-amberEarth/30 px-4 py-2.5 font-mono text-micro text-medium">
+    <div className="border border-medium/40 bg-medium/[0.07]">
+      <p className="border-b border-medium/30 px-4 py-2.5 font-mono text-micro text-medium">
         kept out of the search
       </p>
       {items.length > 0 ? (
         <>
-          <ul className="divide-y divide-amberEarth/20">
+          <ul className="divide-y divide-medium/20">
             {items.map((item) => (
-              <li key={item} className="px-4 py-2.5 font-mono text-small text-shadowGrey">
+              <li key={item} className="px-4 py-2.5 font-mono text-small text-ink2">
                 {item}
               </li>
             ))}
           </ul>
-          <p className="border-t border-amberEarth/30 px-4 py-2.5 text-tiny leading-relaxed text-muted">
+          <p className="border-t border-medium/30 px-4 py-2.5 text-tiny leading-relaxed text-ink2">
             These never reach the query, so a detail you half-invented can't
             narrow the search against you.
           </p>
         </>
       ) : (
-        <p className="px-4 py-2.5 text-tiny leading-relaxed text-muted">
+        <p className="px-4 py-2.5 text-tiny leading-relaxed text-ink2">
           You didn't hedge on anything, so everything above is being searched on.
         </p>
       )}

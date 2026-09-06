@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
+import { MEMOIZE_DARK, defineTheme } from '../lib/monacoTheme'
 import type { Problem, ProblemDetail, VerifyResponse } from '../types'
 import { getProblem, verifySolution } from '../services/api'
 import Timer from '../components/Timer'
@@ -89,19 +90,19 @@ export default function Solve() {
   }, [])
 
   return (
-    <div className="flex h-screen flex-col bg-deep text-white/90">
-      <header className="flex shrink-0 items-center gap-4 border-b border-deepRule px-4 py-2.5">
+    <div className="flex h-screen flex-col bg-ground text-ink">
+      <header className="flex shrink-0 items-center gap-4 border-b border-line px-4 py-2.5">
         <Link to={problem && 'slug' in problem ? `/problems/${problem.slug}` : '/problems'}
-              className="text-sm text-white/50 transition-colors hover:text-white">
+              className="text-sm text-ink3 transition-colors hover:text-ink">
           ← Back
         </Link>
         <span className="truncate font-medium">{problem?.title ?? 'Loading…'}</span>
 
         <div className="ml-auto flex items-center gap-4">
           <Timer />
-          <span className="font-mono text-micro text-white/40">Python 3</span>
+          <span className="font-mono text-micro text-ink3">Python 3</span>
           <button onClick={run} disabled={running || !problemId}
-                  className="btn bg-amberEarth px-4 text-deep hover:bg-amberEarth/90">
+                  className="btn bg-accent px-4 text-deep hover:bg-accent/90">
             {running ? 'Running…' : 'Run tests'}
           </button>
         </div>
@@ -110,19 +111,19 @@ export default function Solve() {
       <div className="flex min-h-0 flex-1">
         {/* Statement */}
         <section style={{ width: `${split}%` }}
-                 className="min-w-0 overflow-y-auto border-r border-deepRule px-6 py-5">
+                 className="min-w-0 overflow-y-auto border-r border-line px-6 py-5">
           {error && !problem && <p role="alert" className="text-hard">{error}</p>}
           {problem && (
             <>
               <h1 className="text-xl font-semibold tracking-tight">{problem.title}</h1>
-              <div className="mt-4 max-w-reading whitespace-pre-wrap text-sm leading-relaxed text-white/70">
+              <div className="mt-4 max-w-reading whitespace-pre-wrap text-sm leading-relaxed text-ink2">
                 {problem.description}
               </div>
 
               {'constraints' in problem && problem.constraints?.length > 0 && (
                 <>
                   <h2 className="mt-6 text-sm font-medium">Constraints</h2>
-                  <ul className="mt-2 space-y-1 font-mono text-micro text-white/60">
+                  <ul className="mt-2 space-y-1 font-mono text-micro text-ink2">
                     {problem.constraints.map((c) => <li key={c}>{c}</li>)}
                   </ul>
                 </>
@@ -133,19 +134,19 @@ export default function Solve() {
                   <h2 className="mt-6 text-sm font-medium">Examples</h2>
                   <div className="mt-2 space-y-3">
                     {problem.examples.map((ex, i) => (
-                      <div key={i} className="border border-deepRule bg-deepPanel p-3 font-mono text-micro">
-                        <p className="text-white/40">Input</p>
-                        <pre className="mt-1 whitespace-pre-wrap text-white/80">{ex.input}</pre>
-                        <p className="mt-2 text-white/40">Output</p>
-                        <pre className="mt-1 whitespace-pre-wrap text-white/80">{ex.output}</pre>
-                        {ex.explanation && <p className="mt-2 text-white/50">{ex.explanation}</p>}
+                      <div key={i} className="border border-line bg-panel p-3 font-mono text-micro">
+                        <p className="text-ink3">Input</p>
+                        <pre className="mt-1 whitespace-pre-wrap text-ink">{ex.input}</pre>
+                        <p className="mt-2 text-ink3">Output</p>
+                        <pre className="mt-1 whitespace-pre-wrap text-ink">{ex.output}</pre>
+                        {ex.explanation && <p className="mt-2 text-ink3">{ex.explanation}</p>}
                       </div>
                     ))}
                   </div>
                 </>
               )}
 
-              <p className="mt-8 border-t border-deepRule pt-4 text-micro text-white/40">
+              <p className="mt-8 border-t border-line pt-4 text-micro text-ink3">
                 Your program reads the whole of stdin and prints the answer to
                 stdout. Test inputs are given exactly as shown above.
               </p>
@@ -157,7 +158,7 @@ export default function Solve() {
           role="separator"
           aria-orientation="vertical"
           onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize' }}
-          className="w-1 shrink-0 cursor-col-resize bg-deepRule transition-colors hover:bg-amberEarth"
+          className="w-1 shrink-0 cursor-col-resize bg-lineStrong transition-colors hover:bg-accent"
         />
 
         {/* Editor + console */}
@@ -167,7 +168,8 @@ export default function Solve() {
               height="100%"
               language="python"
               value={code}
-              theme="vs-dark"
+              theme={MEMOIZE_DARK}
+              beforeMount={defineTheme}
               onChange={(v) => setCode(v ?? '')}
               options={{
                 minimap: { enabled: false },
@@ -196,34 +198,34 @@ function Console({
   const failing = result?.results?.find((r) => !r.passed)
 
   return (
-    <div className="shrink-0 border-t border-deepRule bg-deepPanel">
+    <div className="shrink-0 border-t border-line bg-panel">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-3 px-4 py-2 text-left"
       >
         <span className="text-sm">Results</span>
-        {running && <span className="font-mono text-micro text-amberEarth">running…</span>}
+        {running && <span className="font-mono text-micro text-accent">running…</span>}
         {result && (
           <>
             <span className={`text-sm font-medium ${passed ? 'text-easy' : 'text-hard'}`}>
               {passed ? 'Accepted' : result.status}
             </span>
-            <span className="num font-mono text-micro text-white/50">
+            <span className="num font-mono text-micro text-ink3">
               {result.passed}/{result.total} passed
               {result.runtime && ` · ${result.runtime}`}
               {result.memory && ` · ${result.memory}`}
             </span>
           </>
         )}
-        <span className="ml-auto text-micro text-white/40">{open ? 'Hide' : 'Show'}</span>
+        <span className="ml-auto text-micro text-ink3">{open ? 'Hide' : 'Show'}</span>
       </button>
 
       {open && (
-        <div className="max-h-56 overflow-y-auto border-t border-deepRule px-4 py-3">
+        <div className="max-h-56 overflow-y-auto border-t border-line px-4 py-3">
           {error && <p role="alert" className="text-sm text-hard">{error}</p>}
 
           {!result && !running && !error && (
-            <p className="text-sm text-white/40">
+            <p className="text-sm text-ink3">
               Run your solution to see how it does against the stored test cases.
               <span className="ml-2 font-mono text-micro">⌘↵</span>
             </p>
@@ -245,12 +247,12 @@ function Console({
               </div>
 
               {failing && (
-                <dl className="mt-3 grid gap-x-4 gap-y-1 border-t border-deepRule pt-3 font-mono text-micro sm:grid-cols-[5rem_1fr]">
-                  <dt className="text-white/40">Input</dt>
-                  <dd className="whitespace-pre-wrap break-all text-white/80">{failing.input}</dd>
-                  <dt className="text-white/40">Expected</dt>
-                  <dd className="whitespace-pre-wrap break-all text-white/80">{failing.expected_output}</dd>
-                  <dt className="text-white/40">Got</dt>
+                <dl className="mt-3 grid gap-x-4 gap-y-1 border-t border-line pt-3 font-mono text-micro sm:grid-cols-[5rem_1fr]">
+                  <dt className="text-ink3">Input</dt>
+                  <dd className="whitespace-pre-wrap break-all text-ink">{failing.input}</dd>
+                  <dt className="text-ink3">Expected</dt>
+                  <dd className="whitespace-pre-wrap break-all text-ink">{failing.expected_output}</dd>
+                  <dt className="text-ink3">Got</dt>
                   <dd className="whitespace-pre-wrap break-all text-hard">
                     {failing.actual_output || '(nothing)'}
                   </dd>

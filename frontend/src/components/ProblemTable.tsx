@@ -18,9 +18,9 @@ export default function ProblemTable({
 }) {
   if (loading) {
     return (
-      <div className="card divide-y divide-rule">
+      <div className="card divide-y divide-line">
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="h-11 animate-pulse bg-paper" />
+          <div key={i} className="h-11 animate-pulse bg-ground" />
         ))}
       </div>
     )
@@ -29,10 +29,10 @@ export default function ProblemTable({
   if (!problems.length) {
     return (
       <div className="card px-5 py-12 text-center">
-        <p className="text-small text-muted">No problem matches those filters.</p>
-        <p className="mt-2 text-small text-faint">
+        <p className="text-small text-ink2">No problem matches those filters.</p>
+        <p className="mt-2 text-small text-ink3">
           Clear a filter, or{' '}
-          <Link to="/contribute" className="text-brownRed link">
+          <Link to="/contribute" className="text-link link">
             add the one you are thinking of
           </Link>
           .
@@ -55,7 +55,7 @@ export default function ProblemTable({
           <col className="w-[6%]" />
         </colgroup>
         <thead>
-          <tr className="border-b border-rule">
+          <tr className="border-b border-line">
             <th className="th">problem</th>
             <th className="th">difficulty</th>
             <th className="th">topics</th>
@@ -64,9 +64,9 @@ export default function ProblemTable({
             <th className="th" />
           </tr>
         </thead>
-        <tbody className="divide-y divide-rule">
+        <tbody className="divide-y divide-line">
           {problems.map((p) => (
-            <tr key={p.id} className="group hover:bg-paper">
+            <tr key={p.id} className="group hover:bg-ground">
               <td className="td">
                 <Link
                   to={`/problems/${p.slug}`}
@@ -80,14 +80,14 @@ export default function ProblemTable({
               <td className="td"><Difficulty value={p.difficulty} /></td>
               <td className="td"><TopicsInline names={p.topics} max={2} /></td>
               <td className="td"><Companies names={p.companies} total={p.company_count} /></td>
-              <td className="num td text-right font-mono text-small text-muted">
+              <td className="num td text-right font-mono text-small text-ink2">
                 {p.acceptance != null ? `${p.acceptance.toFixed(0)}%` : '—'}
               </td>
               <td className="td text-right">
                 <Link
                   to={`/solve/${p.slug}`}
-                  className="font-mono text-micro text-faint opacity-0 transition-opacity
-                             group-hover:opacity-100 focus:opacity-100 hover:text-brownRed"
+                  className="font-mono text-micro text-ink3 opacity-0 transition-opacity
+                             group-hover:opacity-100 focus:opacity-100 hover:text-accent"
                 >
                   solve
                 </Link>

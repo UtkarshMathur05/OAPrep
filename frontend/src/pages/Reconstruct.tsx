@@ -122,9 +122,9 @@ export default function Reconstruct() {
   return (
     <div className="shell py-10">
       <div className="mx-auto max-w-5xl">
-        <div className="border border-ruleStrong bg-surface">
+        <div className="border border-lineStrong bg-panel">
           {/* Header: what this is, and how far through it you are. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-ruleStrong px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-lineStrong px-5 py-3">
             <span className="font-mono text-small font-semibold">recall</span>
             <ol className="flex items-center gap-1">
               {STEPS.map((s, i) => (
@@ -132,15 +132,15 @@ export default function Reconstruct() {
                   {i > 0 && (
                     <span
                       aria-hidden
-                      className={`mx-1 h-px w-5 ${i <= current ? 'bg-ruleStrong' : 'bg-rule'}`}
+                      className={`mx-1 h-px w-5 ${i <= current ? 'bg-lineStrong' : 'bg-line'}`}
                     />
                   )}
                   <span
                     aria-current={i === current ? 'step' : undefined}
                     className={`font-mono text-micro ${
-                      i === current ? 'text-brownRed'
-                      : i < current ? 'text-shadowGrey'
-                      : 'text-faint'}`}
+                      i === current ? 'text-accent'
+                      : i < current ? 'text-ink2'
+                      : 'text-ink3'}`}
                   >
                     <span className="num">{String(i + 1).padStart(2, '0')}</span> {s.label}
                   </span>
@@ -152,14 +152,14 @@ export default function Reconstruct() {
           {/* The memory, pinned. Every screen below is an answer to this line,
               and losing sight of it is what made the later steps feel unmoored. */}
           {showEcho && (
-            <div className="flex items-start gap-3 border-b border-rule bg-paper px-5 py-3">
-              <span aria-hidden className="select-none font-mono text-small text-brownRed">&gt;</span>
-              <p className="min-w-0 flex-1 font-mono text-small leading-relaxed text-muted">
+            <div className="flex items-start gap-3 border-b border-line bg-ground px-5 py-3">
+              <span aria-hidden className="select-none font-mono text-small text-accent">&gt;</span>
+              <p className="min-w-0 flex-1 font-mono text-small leading-relaxed text-ink2">
                 {state.transcript}
               </p>
               <button
                 onClick={() => setState({ ...EMPTY })}
-                className="shrink-0 font-mono text-micro text-faint link hover:text-prussianBlue"
+                className="shrink-0 font-mono text-micro text-ink3 link hover:text-ink"
               >
                 start over
               </button>
@@ -167,8 +167,8 @@ export default function Reconstruct() {
           )}
 
           {state.error && (
-            <div role="alert" className="border-b border-rule border-l-2 border-l-brownRed bg-brownRed/5 px-5 py-3">
-              <p className="text-small text-brownRed">{state.error}</p>
+            <div role="alert" className="border-b border-line border-l-2 border-l-brownRed bg-accent/5 px-5 py-3">
+              <p className="text-small text-hard">{state.error}</p>
             </div>
           )}
 
@@ -176,7 +176,7 @@ export default function Reconstruct() {
             {state.step === 'input' && (
               <div className="animate-rise">
                 <h1 className="text-h2">What do you remember?</h1>
-                <p className="mt-1.5 max-w-reading text-small text-muted">
+                <p className="mt-1.5 max-w-reading text-small text-ink2">
                   Anything counts — the shape of the input, what you had to return,
                   a constraint that stuck. Say what you are unsure about too: it is
                   kept out of the search rather than used to narrow it.
@@ -198,7 +198,7 @@ export default function Reconstruct() {
             {state.step === 'memory' && state.memory && (
               <div className="animate-rise">
                 <h2 className="text-h3">Here is what came through</h2>
-                <p className="mt-1.5 text-small text-muted">
+                <p className="mt-1.5 text-small text-ink2">
                   Check it before we search. Only the left column becomes the query.
                 </p>
                 {/* Side by side on purpose: "we keep uncertainty separate" is a
@@ -208,8 +208,8 @@ export default function Reconstruct() {
                   <MemoryCard memory={state.memory} ledgerOnly />
                   <UncertaintyPanel items={state.memory.uncertainties ?? []} />
                 </div>
-                <div className="mt-6 flex items-center justify-between gap-4 border-t border-rule pt-5">
-                  <p className="font-mono text-micro text-faint">
+                <div className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-5">
+                  <p className="font-mono text-micro text-ink3">
                     next: vector search over 1,124 statements, then a rerank
                   </p>
                   <button className="btn-accent" onClick={handleSearchCandidates} disabled={state.loading}>
@@ -222,7 +222,7 @@ export default function Reconstruct() {
             {state.step === 'candidates' && (
               <div className="animate-rise">
                 <h2 className="text-h3">Closest matches</h2>
-                <p className="mt-1.5 text-small text-muted">
+                <p className="mt-1.5 text-small text-ink2">
                   Ranked by how well each one explains what you remember, not by
                   raw text similarity. Pick the one that clicks.
                 </p>
@@ -231,15 +231,15 @@ export default function Reconstruct() {
                     ? <Waiting label="searching the corpus…" />
                     : <CandidateList candidates={state.candidates} onSelect={handleSelectCandidate} />}
                 </div>
-                <div className="mt-6 flex items-center justify-between gap-4 border-t border-rule pt-5">
+                <div className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-5">
                   <button
                     onClick={() => set({ step: 'memory' })}
-                    className="font-mono text-micro text-muted link"
+                    className="font-mono text-micro text-ink2 link"
                   >
                     back to the genome
                   </button>
-                  <p className="font-mono text-micro text-faint">
-                    none of these? <a href="/contribute" className="text-brownRed link">add it</a>
+                  <p className="font-mono text-micro text-ink3">
+                    none of these? <a href="/contribute" className="text-link link">add it</a>
                   </p>
                 </div>
               </div>
@@ -252,15 +252,15 @@ export default function Reconstruct() {
                 ) : (
                   <>
                     <ProblemDisplay problem={state.problem} />
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-rule pt-5">
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">
                       <button
                         onClick={() => set({ step: 'candidates', problem: null })}
-                        className="font-mono text-micro text-muted link"
+                        className="font-mono text-micro text-ink2 link"
                       >
                         try a different match
                       </button>
                       <div className="flex items-center gap-4">
-                        <span className="font-mono text-micro text-faint">
+                        <span className="font-mono text-micro text-ink3">
                           python, run against real test cases
                         </span>
                         <button
@@ -290,10 +290,10 @@ export default function Reconstruct() {
  *  jump the page while a Gemini call is in flight. */
 function Waiting({ label }: { label: string }) {
   return (
-    <div className="flex h-40 items-center justify-center border border-rule bg-paper">
-      <span className="font-mono text-small text-muted">
+    <div className="flex h-40 items-center justify-center border border-line bg-ground">
+      <span className="font-mono text-small text-ink2">
         {label}
-        <span className="ml-1 inline-block animate-pulse text-brownRed">▌</span>
+        <span className="ml-1 inline-block animate-pulse text-accent">▌</span>
       </span>
     </div>
   )

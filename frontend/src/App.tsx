@@ -35,8 +35,8 @@ function NotFound() {
   return (
     <div className="mx-auto max-w-reading px-5 py-20">
       <h1 className="text-2xl font-semibold tracking-tight">No such page</h1>
-      <p className="mt-2 text-muted">
-        Try <a href="/problems" className="text-brownRed underline underline-offset-2">the problem list</a>.
+      <p className="mt-2 text-ink2">
+        Try <a href="/problems" className="text-link underline underline-offset-2">the problem list</a>.
       </p>
     </div>
   )

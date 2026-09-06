@@ -29,22 +29,22 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-ruleStrong bg-paper/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-lineStrong bg-ground/95 backdrop-blur">
         <div className="shell flex h-16 items-stretch gap-6">
           <Link to="/" className="flex shrink-0 items-center font-mono text-base font-semibold tracking-tight">
-            memoize<span className="text-brownRed">/</span>
+            memoize<span className="text-accent">/</span>
           </Link>
 
           <nav className="flex min-w-0 flex-1 items-stretch overflow-x-auto">
             {BROWSE.map((item) => <Tab key={item.to} {...item} />)}
-            <span aria-hidden className="my-4 mx-3 w-px shrink-0 bg-rule" />
+            <span aria-hidden className="my-4 mx-3 w-px shrink-0 bg-line" />
             {DO.map((item) => <Tab key={item.to} {...item} accent />)}
           </nav>
 
           {/* Quiet context rather than a second call to action. The nav already
               has 'recall'; a button repeating it was the loudest redundant
               thing on every page. */}
-          <span className="hidden shrink-0 items-center font-mono text-micro text-faint lg:flex">
+          <span className="hidden shrink-0 items-center font-mono text-micro text-ink3 lg:flex">
             {total ? `${total.toLocaleString()} problems indexed` : ''}
           </span>
         </div>
@@ -54,12 +54,12 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-rule">
+      <footer className="border-t border-line">
         <div className="shell flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 py-8">
-          <p className="font-mono text-micro text-faint">
+          <p className="font-mono text-micro text-ink3">
             statements from LeetCode · community problems labelled and scored
           </p>
-          <p className="font-mono text-micro text-faint">
+          <p className="font-mono text-micro text-ink3">
             hackathon build · python executed on Judge0
           </p>
         </div>
@@ -80,8 +80,8 @@ function Tab({ to, label, accent }: { to: string; label: string; accent?: boolea
         `relative flex shrink-0 items-center px-3 font-mono text-small transition-colors
          after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:transition-colors
          ${isActive
-           ? 'text-prussianBlue after:bg-brownRed'
-           : `after:bg-transparent hover:text-prussianBlue ${accent ? 'text-shadowGrey' : 'text-faint'}`}`
+           ? 'text-ink after:bg-accent'
+           : `after:bg-transparent hover:text-ink ${accent ? 'text-ink2' : 'text-ink3'}`}`
       }
     >
       {label}

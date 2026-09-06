@@ -21,8 +21,8 @@ export default function ProblemPage() {
   if (error) {
     return (
       <div className="shell max-w-reading py-20">
-        <p role="alert" className="text-muted">{error}</p>
-        <Link to="/problems" className="mt-3 inline-block text-small text-brownRed link">
+        <p role="alert" className="text-ink2">{error}</p>
+        <Link to="/problems" className="mt-3 inline-block text-small text-link link">
           Back to all problems
         </Link>
       </div>
@@ -32,7 +32,7 @@ export default function ProblemPage() {
   if (!problem) {
     return (
       <div className="shell py-10">
-        <div className="h-64 animate-pulse border border-rule bg-surface" />
+        <div className="h-64 animate-pulse border border-line bg-panel" />
       </div>
     )
   }
@@ -40,7 +40,7 @@ export default function ProblemPage() {
   return (
     <div className="shell grid gap-10 py-10 lg:grid-cols-[1fr_16rem]">
       <article className="min-w-0">
-        <Link to="/problems" className="font-mono text-micro text-faint hover:text-prussianBlue">
+        <Link to="/problems" className="font-mono text-micro text-ink3 hover:text-ink">
           ← all problems
         </Link>
 
@@ -51,18 +51,18 @@ export default function ProblemPage() {
         </div>
 
         {problem.origin === 'community' && (
-          <p className="mt-5 border border-amberEarth/40 border-l-2 border-l-amberEarth bg-amberEarth/10 px-4 py-3 text-small text-shadowGrey">
+          <p className="mt-5 border border-medium/40 border-l-2 border-l-medium bg-medium/10 px-4 py-3 text-small text-ink2">
             This problem was written from a user's description, not fetched from
             LeetCode. Parts of it are inferred. Its confidence rises each time
             somebody else independently describes the same problem.
           </p>
         )}
 
-        <div className="mt-7 max-w-reading whitespace-pre-wrap leading-relaxed text-shadowGrey">
+        <div className="mt-7 max-w-reading whitespace-pre-wrap leading-relaxed text-ink2">
           {problem.description}
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6">
+        <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-6">
           <Link to={`/solve/${problem.slug}`} className="btn-primary">
             solve this problem
           </Link>
@@ -76,7 +76,7 @@ export default function ProblemPage() {
               open on LeetCode
             </a>
           )}
-          <span className="font-mono text-micro text-faint">
+          <span className="font-mono text-micro text-ink3">
             {problem.test_case_count > 0
               ? `${problem.test_case_count} stored test ${problem.test_case_count === 1 ? 'case' : 'cases'}`
               : 'Test cases are generated on your first run'}
@@ -85,7 +85,7 @@ export default function ProblemPage() {
       </article>
 
       <aside className="lg:sticky lg:top-16 lg:self-start">
-        <dl className="divide-y divide-rule border border-rule bg-surface">
+        <dl className="divide-y divide-line border border-line bg-panel">
           <Row label="topics"><Topics names={problem.topics} max={8} /></Row>
           <Row label="asked at">
             <Companies names={problem.companies} total={problem.company_count} />
@@ -96,18 +96,18 @@ export default function ProblemPage() {
             </span>
           </Row>
           <Row label="last reported">
-            <span className="font-mono text-small text-muted">{problem.recency ?? '—'}</span>
+            <span className="font-mono text-small text-ink2">{problem.recency ?? '—'}</span>
           </Row>
           <Row label="source">
-            <span className="font-mono text-small capitalize text-muted">{problem.platform ?? '—'}</span>
+            <span className="font-mono text-small capitalize text-ink2">{problem.platform ?? '—'}</span>
           </Row>
         </dl>
 
-        <div className="mt-4 border border-rule bg-surface px-4 py-3">
-          <p className="text-small text-muted">
+        <div className="mt-4 border border-line bg-panel px-4 py-3">
+          <p className="text-small text-ink2">
             Not quite the one you were thinking of?
           </p>
-          <Link to="/recall" className="mt-1 inline-block text-small text-brownRed link">
+          <Link to="/recall" className="mt-1 inline-block text-small text-link link">
             Describe what you remember instead
           </Link>
         </div>

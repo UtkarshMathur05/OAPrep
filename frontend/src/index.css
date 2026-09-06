@@ -4,83 +4,91 @@
 
 @layer base {
   html {
+    color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-paper text-base text-prussianBlue;
+    @apply bg-ground text-base text-ink;
     font-family: theme('fontFamily.sans');
   }
 
-  /* Headings are prose, so they stay in the sans. Their weight is 600 rather
-     than bold: Plex Sans at 700 gets blocky at display sizes. */
   h1, h2, h3 { @apply font-semibold; }
 
   /* Tabular figures wherever a number is compared down a column or ticks in
-     place: match scores, problem counts, acceptance, the timer. */
+     place: match scores, counts, acceptance, the timer. */
   .num { font-variant-numeric: tabular-nums; }
+
+  /* The editor's own scrollbars, so a scrolling panel does not punch a bright
+     stripe through a dark screen. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.lineStrong') transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: theme('colors.lineStrong');
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover { background-color: theme('colors.ink3'); background-clip: content-box; }
+
+  ::selection { background: theme('colors.select'); color: theme('colors.ink'); }
 }
 
 @layer components {
   /* --- Structure -------------------------------------------------------- */
 
-  /* One shell width for every page, so the left edge never moves between
-     routes. Nothing in the site is wider than this. */
   .shell { @apply mx-auto w-full max-w-shell px-5 sm:px-8; }
+  .band  { @apply border-b border-line py-band-sm sm:py-band; }
 
-  /* A page band: one idea, hairline-ruled off from the next. Bands share one
-     vertical measure so the page has a pulse instead of ad-hoc margins. */
-  .band { @apply border-b border-rule py-band-sm sm:py-band; }
-
-  /* Small structural label. Lowercase mono, not tracked-out caps — caps labels
-     are the default tell, and lowercase mono is what a terminal would print. */
-  .label { @apply font-mono text-micro text-faint; }
+  /* Lowercase mono label. Not tracked-out caps — an editor's own gutter and
+     panel headers are lowercase, and caps labels are the generic default. */
+  .label { @apply font-mono text-micro text-ink3; }
 
   /* --- Actions ---------------------------------------------------------- */
 
-  /* Buttons are mono: they are interface, not prose. Square, because every
-     other edge on the page is square. */
   .btn {
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap
            px-4 py-2 font-mono text-small font-medium transition-colors
            disabled:cursor-not-allowed disabled:opacity-40
            focus-visible:outline focus-visible:outline-2
-           focus-visible:outline-offset-2 focus-visible:outline-brownRed;
+           focus-visible:outline-offset-2 focus-visible:outline-accent;
   }
-  .btn-primary { @apply btn bg-prussianBlue text-white hover:bg-shadowGrey; }
-  .btn-accent  { @apply btn bg-brownRed text-white hover:bg-brownRed/90; }
-  .btn-ghost   { @apply btn border border-ruleStrong bg-surface hover:border-prussianBlue; }
+  /* The Run button's treatment, promoted to the site's one primary action.
+     Dark text on amber, because amber is too bright to carry white. */
+  .btn-accent  { @apply btn bg-accent text-ground hover:bg-accent/90; }
+  .btn-primary { @apply btn border border-lineStrong bg-raised text-ink hover:border-ink3; }
+  .btn-ghost   { @apply btn border border-line bg-transparent text-ink2 hover:border-lineStrong hover:text-ink; }
   .btn-sm      { @apply px-2.5 py-1 text-micro; }
 
   /* --- Surfaces --------------------------------------------------------- */
 
-  .card { @apply border border-rule bg-surface; }
+  .card { @apply border border-line bg-panel; }
 
-  /* Metadata chip. Reads as a token, which is what a topic tag is. */
   .chip {
-    @apply inline-flex items-center gap-1 border border-rule bg-paper
-           px-1.5 py-0.5 font-mono text-micro text-muted
-           transition-colors hover:border-ruleStrong hover:text-prussianBlue;
+    @apply inline-flex items-center gap-1 border border-line bg-raised
+           px-1.5 py-0.5 font-mono text-micro text-ink2
+           transition-colors hover:border-lineStrong hover:text-ink;
   }
 
-  /* Text input and textarea share one treatment: square, hairline, and the
-     border goes ink on focus rather than growing a ring. */
+  /* Inputs read as an editor's find-widget: flat, square, and the border goes
+     amber on focus rather than growing a ring. */
   .field {
-    @apply w-full border border-ruleStrong bg-surface px-3 py-2 text-small
-           placeholder:text-faint focus:border-prussianBlue focus:outline-none;
+    @apply w-full border border-line bg-raised px-3 py-2 text-small text-ink
+           placeholder:text-ink3 focus:border-accent focus:outline-none;
   }
 
   /* --- Tables ----------------------------------------------------------- */
 
-  .th {
-    @apply px-3 py-2 text-left font-mono text-micro font-normal text-faint;
-  }
+  .th { @apply px-3 py-2 text-left font-mono text-micro font-normal text-ink3; }
   .td { @apply px-3 py-2.5 align-middle; }
 
   /* --- Links ------------------------------------------------------------ */
 
-  .link { @apply underline decoration-ruleStrong underline-offset-2 hover:decoration-brownRed; }
+  .link { @apply underline decoration-lineStrong underline-offset-2 hover:decoration-accent; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,5 @@
 import Editor from '@monaco-editor/react'
+import { MEMOIZE_DARK, defineTheme } from '../lib/monacoTheme'
 
 interface Props {
   value: string
@@ -8,12 +9,13 @@ interface Props {
 
 export default function CodeEditor({ value, language, onChange }: Props) {
   return (
-    <div className="h-[500px] border-x-2 border-b-2 border-prussianBlue bg-[#1e1e1e]">
+    <div className="h-[500px] border-x-2 border-b-2 border-lineStrong bg-ground">
       <Editor
         height="100%"
         language={language}
         value={value}
-        theme="vs-dark"
+        theme={MEMOIZE_DARK}
+        beforeMount={defineTheme}
         onChange={(v) => onChange(v ?? '')}
         options={{ 
           minimap: { enabled: false }, 
