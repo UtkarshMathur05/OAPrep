@@ -9,10 +9,13 @@ import type {
   SearchRequest, SearchResponse,
   ReconstructRequest, ReconstructResponse,
   VerifyRequest, VerifyResponse,
+  FacetsResponse,
+  ContributeMatchRequest, ContributeMatchResponse,
+  ContributeRequest, ContributeResponse,
 } from '../types'
 import {
   mockMemoryResponse, mockSearchResponse, mockReconstructResponse, mockVerifyResponse,
-  mockProblemList, mockProblemDetail,
+  mockProblemList, mockProblemDetail, mockFacets,
 } from '../data/mockData'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
@@ -59,5 +62,27 @@ export async function getProblem(idOrSlug: string): Promise<ProblemDetail> {
 export async function verifySolution(body: VerifyRequest): Promise<VerifyResponse> {
   if (USE_MOCK) return mock(mockVerifyResponse, 900)
   const { data } = await client.post<VerifyResponse>('/verify', body)
+  return data
+}
+
+export async function getFacets(): Promise<FacetsResponse> {
+  if (USE_MOCK) return mock(mockFacets)
+  const { data } = await client.get<FacetsResponse>('/problems/facets')
+  return data
+}
+
+/** Step 1 of contributing: do we already have what they are describing? */
+export async function matchContribution(
+  body: ContributeMatchRequest,
+): Promise<ContributeMatchResponse> {
+  const { data } = await client.post<ContributeMatchResponse>('/contribute/match', body)
+  return data
+}
+
+/** Step 2: create a community problem, or corroborate an existing one. */
+export async function submitContribution(
+  body: ContributeRequest,
+): Promise<ContributeResponse> {
+  const { data } = await client.post<ContributeResponse>('/contribute', body)
   return data
 }

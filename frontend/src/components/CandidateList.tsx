@@ -1,18 +1,25 @@
 import type { Candidate } from '../types'
 import ConfidenceScore from './ConfidenceScore'
+import { Companies, Difficulty, TopicsInline } from './Tags'
 
 interface Props {
   candidates: Candidate[]
   onSelect: (candidate: Candidate) => void
 }
 
-/** Candidates are tabular data — title, match, difficulty, topics, who asks it —
- *  so they are rendered as a table rather than a stack of cards. Columns make
- *  the scores comparable down the page, which is the whole point of the screen. */
+/**
+ * Candidates are tabular data — title, match, difficulty, topics, who asks it —
+ * so they are a table rather than a stack of cards. Columns make the scores
+ * comparable down the page, which is the whole point of the screen.
+ *
+ * The top row's action is the primary button. Reranking has already done the
+ * work of deciding; making every row's button identical threw that away and
+ * asked the user to redo it.
+ */
 export default function CandidateList({ candidates, onSelect }: Props) {
   if (candidates.length === 0) {
     return (
-      <p className="border border-rule bg-surface p-6 text-muted">
+      <p className="card p-6 text-small text-muted">
         No problem matched that memory closely enough. Add another detail — a
         constraint, an example, or what the answer looked like.
       </p>
@@ -20,61 +27,48 @@ export default function CandidateList({ candidates, onSelect }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto border border-ruleStrong bg-surface">
-      <table className="w-full border-collapse text-left text-sm">
+    <div className="card overflow-x-auto">
+      <table className="w-full min-w-[46rem] table-fixed border-collapse text-left">
+        <colgroup>
+          <col className="w-[36%]" />
+          <col className="w-[12%]" />
+          <col className="w-[10%]" />
+          <col className="w-[23%]" />
+          <col className="w-[19%]" />
+        </colgroup>
         <thead>
-          <tr className="border-b border-ruleStrong text-2xs text-muted">
-            <th scope="col" className="px-4 py-2 font-medium">Problem</th>
-            <th scope="col" className="px-4 py-2 font-medium">Match</th>
-            <th scope="col" className="hidden px-4 py-2 font-medium sm:table-cell">Difficulty</th>
-            <th scope="col" className="hidden px-4 py-2 font-medium md:table-cell">Topics</th>
-            <th scope="col" className="hidden px-4 py-2 font-medium lg:table-cell">Asked at</th>
-            <th scope="col" className="px-4 py-2"><span className="sr-only">Choose</span></th>
+          <tr className="border-b border-rule">
+            <th scope="col" className="th">problem</th>
+            <th scope="col" className="th">match</th>
+            <th scope="col" className="th hidden sm:table-cell">difficulty</th>
+            <th scope="col" className="th hidden md:table-cell">topics</th>
+            <th scope="col" className="th text-right">asked at</th>
           </tr>
         </thead>
-        <tbody>
-          {candidates.map((c) => (
-            <tr
-              key={c.id}
-              className="group border-b border-rule align-top last:border-0 hover:bg-floralWhite"
-            >
-              <td className="px-4 py-3">
+        <tbody className="divide-y divide-rule">
+          {candidates.map((c, i) => (
+            <tr key={c.id} className={i === 0 ? 'bg-floralWhite/60' : undefined}>
+              <td className="td">
                 <div className="font-medium">{c.title}</div>
                 {c.reason && (
-                  <p className="mt-1 max-w-reading text-sm text-muted">{c.reason}</p>
+                  <p className="mt-1 text-tiny leading-relaxed text-muted">{c.reason}</p>
                 )}
-              </td>
-              <td className="px-4 py-3"><ConfidenceScore value={c.confidence} /></td>
-              <td className="hidden px-4 py-3 sm:table-cell">
-                {c.difficulty && (
-                  <span className="font-mono text-sm text-muted">{c.difficulty}</span>
-                )}
-              </td>
-              <td className="hidden px-4 py-3 md:table-cell">
-                <ul className="space-y-0.5">
-                  {(c.topics ?? []).slice(0, 3).map((t) => (
-                    <li key={t} className="font-mono text-2xs text-muted">{t}</li>
-                  ))}
-                </ul>
-              </td>
-              <td className="hidden px-4 py-3 lg:table-cell">
-                {c.company_count > 0 && (
-                  <span className="text-sm text-muted">
-                    {(c.companies ?? []).slice(0, 2).join(', ')}
-                    {c.company_count > 2 && ` +${c.company_count - 2}`}
-                  </span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-right">
                 <button
                   onClick={() => onSelect(c)}
-                  className="border border-prussianBlue px-3 py-1.5 text-sm font-medium
-                             transition-colors hover:bg-prussianBlue hover:text-floralWhite
-                             focus-visible:outline focus-visible:outline-2
-                             focus-visible:outline-offset-2 focus-visible:outline-brownRed"
+                  className={`mt-2.5 ${i === 0 ? 'btn-accent btn-sm' : 'btn-ghost btn-sm'}`}
                 >
-                  Rebuild this
+                  {i === 0 ? 'rebuild this' : 'rebuild'}
                 </button>
+              </td>
+              <td className="td align-top"><ConfidenceScore value={c.confidence} /></td>
+              <td className="td hidden align-top sm:table-cell">
+                <Difficulty value={c.difficulty} />
+              </td>
+              <td className="td hidden align-top md:table-cell">
+                <TopicsInline names={c.topics ?? []} max={2} />
+              </td>
+              <td className="td align-top text-right">
+                <Companies names={c.companies ?? []} total={c.company_count} />
               </td>
             </tr>
           ))}

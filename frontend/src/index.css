@@ -1,3 +1,91 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-paper text-base text-prussianBlue;
+    font-family: theme('fontFamily.sans');
+  }
+
+  /* Headings are prose, so they stay in the sans. Their weight is 600 rather
+     than bold: Plex Sans at 700 gets blocky at display sizes. */
+  h1, h2, h3 { @apply font-semibold; }
+
+  /* Tabular figures wherever a number is compared down a column or ticks in
+     place: match scores, problem counts, acceptance, the timer. */
+  .num { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  /* --- Structure -------------------------------------------------------- */
+
+  /* One shell width for every page, so the left edge never moves between
+     routes. Nothing in the site is wider than this. */
+  .shell { @apply mx-auto w-full max-w-shell px-5 sm:px-8; }
+
+  /* A page band: one idea, hairline-ruled off from the next. Bands share one
+     vertical measure so the page has a pulse instead of ad-hoc margins. */
+  .band { @apply border-b border-rule py-band-sm sm:py-band; }
+
+  /* Small structural label. Lowercase mono, not tracked-out caps — caps labels
+     are the default tell, and lowercase mono is what a terminal would print. */
+  .label { @apply font-mono text-micro text-faint; }
+
+  /* --- Actions ---------------------------------------------------------- */
+
+  /* Buttons are mono: they are interface, not prose. Square, because every
+     other edge on the page is square. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap
+           px-4 py-2 font-mono text-small font-medium transition-colors
+           disabled:cursor-not-allowed disabled:opacity-40
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-brownRed;
+  }
+  .btn-primary { @apply btn bg-prussianBlue text-white hover:bg-shadowGrey; }
+  .btn-accent  { @apply btn bg-brownRed text-white hover:bg-brownRed/90; }
+  .btn-ghost   { @apply btn border border-ruleStrong bg-surface hover:border-prussianBlue; }
+  .btn-sm      { @apply px-2.5 py-1 text-micro; }
+
+  /* --- Surfaces --------------------------------------------------------- */
+
+  .card { @apply border border-rule bg-surface; }
+
+  /* Metadata chip. Reads as a token, which is what a topic tag is. */
+  .chip {
+    @apply inline-flex items-center gap-1 border border-rule bg-paper
+           px-1.5 py-0.5 font-mono text-micro text-muted
+           transition-colors hover:border-ruleStrong hover:text-prussianBlue;
+  }
+
+  /* Text input and textarea share one treatment: square, hairline, and the
+     border goes ink on focus rather than growing a ring. */
+  .field {
+    @apply w-full border border-ruleStrong bg-surface px-3 py-2 text-small
+           placeholder:text-faint focus:border-prussianBlue focus:outline-none;
+  }
+
+  /* --- Tables ----------------------------------------------------------- */
+
+  .th {
+    @apply px-3 py-2 text-left font-mono text-micro font-normal text-faint;
+  }
+  .td { @apply px-3 py-2.5 align-middle; }
+
+  /* --- Links ------------------------------------------------------------ */
+
+  .link { @apply underline decoration-ruleStrong underline-offset-2 hover:decoration-brownRed; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

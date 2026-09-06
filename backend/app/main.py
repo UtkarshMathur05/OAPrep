@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import errors
 from app.config import CORS_ORIGINS, GEMINI_API_KEY, USE_MOCK_AI
-from app.api import memory, search, reconstruct, verify, problems
+from app.api import memory, search, reconstruct, verify, problems, contribute
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -39,6 +39,7 @@ app.include_router(search.router)
 app.include_router(reconstruct.router)
 app.include_router(verify.router)
 app.include_router(problems.router)
+app.include_router(contribute.router)
 
 
 @app.get("/health")

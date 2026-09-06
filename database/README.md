@@ -89,3 +89,48 @@ measurably *hurts* recall. Add one only past ~10k rows.
 `problems.embedding` is `VECTOR(768)`, matching `gemini-embedding-001` at the
 default output size. If you change `EMBEDDING_DIM` in `.env`, change the column
 too — pgvector will reject mismatched inserts.
+
+
+## Community contributions (`05_community.sql`)
+
+Two things a user-contributed problem needs that the corpus dump did not.
+
+**Three columns on `problems`.** `origin` (`corpus` | `community`), `confidence`
+and `contribution_count`. Columns rather than a separate table, for the same
+reason the company metadata is columns: a community problem is a problem, and
+splitting it out would mean a join on every browse query and two shapes for one
+concept.
+
+**One table, `contributions`.** One row per person who described a problem, with
+their raw transcript and follow-up answers. A counter alone would have been
+enough to compute confidence, but not to show *why* a problem sits at 0.65 —
+and being able to put the three separate recollections on screen is most of the
+point.
+
+```text
+confidence = min(0.95, 0.35 + 0.15 × (contribution_count − 1))
+```
+
+Corpus rows are fixed at 1.0. Community rows never reach it: a remembered
+statement does not become as trustworthy as one fetched from LeetCode, however
+many people remember it the same way.
+
+Slug collisions are resolved by suffixing (`-2`, `-3`), never by upserting. Two
+people describing "that sliding window thing" are not necessarily describing the
+same problem, and merging them on slug would quietly corrupt the very signal
+confidence is measuring.
+
+`idx_problems_topics` (GIN) was added alongside it — browsing by topic is a
+first-class nav axis now, so it gets the same treatment `companies` has.
+
+### Applying it to an existing volume
+
+Docker only runs `database/init/*.sql` on an **empty** volume, so an existing
+database needs it by hand:
+
+```bash
+docker exec -i memoize-db psql -U recollect -d recollect < database/init/05_community.sql
+```
+
+Every statement is `IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`, so re-running it
+is harmless.

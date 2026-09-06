@@ -7,7 +7,7 @@
 
 import type {
   Genome, MemoryResponse, SearchResponse, ReconstructResponse, VerifyResponse,
-  ProblemDetail, ProblemListResponse,
+  ProblemDetail, ProblemListResponse, FacetsResponse,
 } from '../types'
 
 export const mockGenome: Genome = {
@@ -138,6 +138,9 @@ export const mockProblemList: ProblemListResponse = {
       popularity: 812.5,
       acceptance: 64.1,
       recency: '3mo',
+      origin: 'corpus',
+      confidence: 1,
+      contribution_count: 0,
     },
     {
       id: 'c494f9b7-249c-4b42-ae40-3934842375cf',
@@ -152,6 +155,9 @@ export const mockProblemList: ProblemListResponse = {
       popularity: 9775.0,
       acceptance: 57.8,
       recency: '30d',
+      origin: 'corpus',
+      confidence: 1,
+      contribution_count: 0,
     },
     {
       id: 'e9871b85-761a-45da-b95a-b076b7572cb9',
@@ -166,6 +172,9 @@ export const mockProblemList: ProblemListResponse = {
       popularity: 431.0,
       acceptance: 65.2,
       recency: '6mo',
+      origin: 'corpus',
+      confidence: 1,
+      contribution_count: 0,
     },
   ],
 }
@@ -178,4 +187,26 @@ export const mockProblemDetail: ProblemDetail = {
     'You can only move either down or right at any point in time.',
   has_embedding: true,
   test_case_count: 5,
+}
+
+// Real shape and real proportions from the loaded corpus, trimmed to what a
+// nav rail shows.
+export const mockFacets: FacetsResponse = {
+  companies: [
+    { name: 'google', count: 1009 }, { name: 'amazon', count: 976 },
+    { name: 'microsoft', count: 861 }, { name: 'meta', count: 825 },
+    { name: 'bloomberg', count: 604 }, { name: 'apple', count: 512 },
+    { name: 'uber', count: 431 }, { name: 'adobe', count: 388 },
+  ],
+  topics: [
+    { name: 'Array', count: 636 }, { name: 'String', count: 259 },
+    { name: 'Hash Table', count: 242 }, { name: 'Dynamic Programming', count: 182 },
+    { name: 'Math', count: 168 }, { name: 'Sorting', count: 152 },
+    { name: 'Greedy', count: 141 }, { name: 'Tree', count: 133 },
+  ],
+  difficulties: [
+    { name: 'easy', count: 296 }, { name: 'medium', count: 615 },
+    { name: 'hard', count: 213 },
+  ],
+  totals: { problems: 1124, community: 0, companies: 608, topics: 143 },
 }

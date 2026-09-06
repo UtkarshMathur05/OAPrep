@@ -41,6 +41,12 @@ Put anything the person recalled that this problem does NOT contain into
 "notes", phrased for them to read, e.g. "You recalled obstacles; this problem
 has none - you may be thinking of Unique Paths II."
 
+Notes are about the PROBLEM, never about you or about these instructions.
+Never write "I", "as you requested", "the standard format", or anything else
+that describes how this text was produced - the reader sees the note, not the
+request, and a note about the request is noise to them. If there is nothing
+that conflicts with what they remembered, return an empty list.
+
 PROBLEM GENOME:
 {genome}
 

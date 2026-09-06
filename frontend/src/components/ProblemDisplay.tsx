@@ -42,7 +42,7 @@ function Section({
         {mark && (
           <span className="inline-flex items-center gap-1.5" title={mark.label}>
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${mark.dot}`} />
-            <span className="text-2xs">{p}</span>
+            <span className="text-micro">{p}</span>
           </span>
         )}
       </h3>
@@ -114,7 +114,7 @@ export default function ProblemDisplay({ problem }: { problem: Problem }) {
 
       <footer className="flex flex-wrap gap-4 border-t border-rule px-6 py-3">
         {legend.map((k) => (
-          <span key={k} className="flex items-center gap-1.5 text-2xs text-muted">
+          <span key={k} className="flex items-center gap-1.5 text-micro text-muted">
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${MARK[k].dot}`} />
             {MARK[k].label}
           </span>

@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas.problems import ProblemDetail, ProblemListResponse
+from app.schemas.problems import FacetsResponse, ProblemDetail, ProblemListResponse
 from app.services import database_service
 
 router = APIRouter(tags=["problems"])
@@ -19,13 +19,26 @@ def list_problems(
     offset: int = Query(0, ge=0),
     difficulty: Optional[str] = Query(None, description="easy | medium | hard"),
     company: Optional[str] = Query(None, description="lowercase slug, e.g. 'google'"),
-    search: Optional[str] = Query(None, description="case-insensitive title match"),
+    search: Optional[str] = Query(None, description="case-insensitive title/statement match"),
+    topic: Optional[str] = Query(None, description="LeetCode tag, e.g. 'Dynamic Programming'"),
+    origin: Optional[str] = Query(None, description="corpus | community"),
+    sort: str = Query("popularity",
+                      description="popularity | title | difficulty | companies | "
+                                  "acceptance | newest"),
 ) -> ProblemListResponse:
     rows, total = database_service.list_problems(
         limit=limit, offset=offset,
         difficulty=difficulty, company=company, search=search,
+        topic=topic, origin=origin, sort=sort,
     )
     return ProblemListResponse(total=total, limit=limit, offset=offset, problems=rows)
+
+
+# Declared before /problems/{problem_id} so "facets" is not read as an id.
+@router.get("/problems/facets", response_model=FacetsResponse)
+def problem_facets() -> FacetsResponse:
+    """Every browse axis with its counts — one request for the whole nav."""
+    return FacetsResponse(**database_service.facets())
 
 
 @router.get("/problems/{problem_id}", response_model=ProblemDetail)

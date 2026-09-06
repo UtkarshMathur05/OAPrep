@@ -203,10 +203,19 @@ Browse the known-problem corpus.
 | `offset` | 0 | pagination |
 | `difficulty` | — | `easy` / `medium` / `hard` |
 | `company` | — | lowercase slug, e.g. `google`; GIN-indexed |
-| `search` | — | case-insensitive title match |
+| `search` | — | case-insensitive match on title **or** statement |
+| `topic` | — | LeetCode tag, verbatim casing: `Dynamic Programming`; GIN-indexed |
+| `origin` | — | `corpus` (LeetCode dump) or `community` (user-contributed) |
+| `sort` | `popularity` | `popularity` / `title` / `difficulty` / `companies` / `acceptance` / `newest` |
 
-Ordered by `popularity` descending — the corpus ranking, so the most commonly
-asked problems come first.
+Default order is `popularity` descending — the corpus ranking, so the most
+commonly asked problems come first. `sort` is matched against a whitelist
+server-side; an unknown value silently falls back to `popularity` rather than
+erroring, because a stale bookmark should still render a page.
+
+`companies` is ranked by how much of the corpus each company asks, then sliced
+to five. The stored array is alphabetical, so slicing it raw put "Accenture,
+Accolite, Adobe" on every row — accurate and useless.
 
 **Response**
 ```json
@@ -227,7 +236,10 @@ asked problems come first.
       "company_count": 41,
       "popularity": 812.5,
       "acceptance": 64.1,
-      "recency": "3mo"
+      "recency": "3mo",
+      "origin": "corpus",
+      "confidence": 1.0,
+      "contribution_count": 0
     }
   ]
 }
@@ -246,6 +258,116 @@ searchable yet) and `test_case_count`. `404` with `{"detail": "..."}` when absen
 > stored text; a reconstructed problem carries `constraints`, `examples` and
 > `confidence`, which Gemini produces at reconstruct time and which are not
 > columns. Two shapes, deliberately.
+
+## GET /problems/facets
+
+Every browse axis with its counts, in one request. This is what the sidebar,
+the company directory and the topic directory all read.
+
+```json
+{
+  "companies": [{ "name": "google", "count": 1009 }],
+  "topics": [{ "name": "Array", "count": 636 }],
+  "difficulties": [{ "name": "easy", "count": 296 }],
+  "totals": { "problems": 1124, "community": 0, "companies": 608, "topics": 143 }
+}
+```
+
+`companies` is capped at 80 entries and `topics` at 40 — the tail is a long
+drizzle of one-problem companies that adds scrolling, not information. `totals`
+carries the true, uncapped counts.
+
+> Declared **before** `/problems/{id}` in the router, or `facets` is read as an
+> identifier and 404s.
+
+---
+
+## POST /contribute/match
+
+Step one of contributing: check whether the corpus already has what the user is
+describing. Runs the same extract → retrieve → rerank pipeline as `/memory` +
+`/search`, but tolerates finding nothing — "we don't have this" is the answer
+that sends the user on to create it.
+
+**Request**
+```json
+{ "transcript": "a robot collecting shelves, K kilos per trip…", "top_k": 5 }
+```
+
+**Response**
+```json
+{
+  "memory_id": "…",
+  "memory": { "concepts": ["greedy"], "…": [] },
+  "candidates": [{ "id": "…", "title": "Watering Plants", "confidence": 0.85 }],
+  "likely_duplicate": true
+}
+```
+
+`likely_duplicate` is `true` when the top candidate scores ≥ 0.75. It is a
+default, not a block — the UI still offers "none of these".
+
+## POST /contribute
+
+Step two: either corroborate an existing problem or write a new one.
+
+**Request** — send `confirm_problem_id` to corroborate, omit it to create:
+```json
+{
+  "transcript": "…",
+  "details": {
+    "title": "Warehouse robot trips",
+    "difficulty": "medium",
+    "topics": ["Greedy"],
+    "companies": ["zoho"],
+    "input_format": "First line n and K, then n lines of position and weight",
+    "output_format": "A single integer",
+    "example": "…",
+    "constraints": "n up to 10^5"
+  },
+  "confirm_problem_id": null
+}
+```
+
+Every field of `details` is optional. Anything left blank is inferred by Gemini
+while drafting the statement, and every inference is appended to the stored
+description under "Assumed while writing this up" rather than presented as
+fact — CLAUDE.md §19, applied to the corpus itself.
+
+**Response**
+```json
+{
+  "problem_id": "4abb036c-…",
+  "slug": "warehouse-robot-trip-minimization",
+  "title": "Warehouse Robot Trip Minimization",
+  "action": "created",
+  "confidence": 0.35,
+  "contribution_count": 1,
+  "test_case_count": 1,
+  "message": "Added as a community problem at 35% confidence. …"
+}
+```
+
+### The confidence rule
+
+A community problem is an inference until other people independently describe
+the same thing, so trust is a stored number rather than an assumption:
+
+```text
+confidence = min(0.95, 0.35 + 0.15 × (contribution_count − 1))
+```
+
+One account is 0.35. Each further description adds 0.15, capped at 0.95 — a
+community statement never becomes as trustworthy as one fetched from LeetCode.
+Corpus rows sit at 1.0 and do not move: a user agreeing with a LeetCode
+statement is not new evidence about that statement. The contribution is still
+recorded, because it tells us which corpus problems people actually
+half-remember.
+
+Creation refuses rather than half-succeeding in two places. An empty drafted
+statement returns `422` — a blank statement would match everything in retrieval.
+A failed embedding returns `503` and saves nothing — a row with no vector exists
+but is invisible to recall, which is the most confusing possible outcome.
 
 ## GET /health
 

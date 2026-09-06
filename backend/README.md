@@ -99,12 +99,15 @@ See [../docs/API.md](../docs/API.md) for the full contract.
 | --- | --- | --- | --- |
 | GET | `/health` | liveness | live |
 | GET | `/health/db` | DB reachable + corpus size | live |
-| GET | `/problems` | browse corpus; `limit`/`offset`/`difficulty`/`company`/`search` | live |
+| GET | `/problems` | browse corpus; `difficulty`/`company`/`topic`/`origin`/`search`/`sort` | live |
+| GET | `/problems/facets` | every browse axis with counts, one request | live |
 | GET | `/problems/{id}` | one problem, **by UUID or slug** | live |
 | POST | `/memory` | transcript → Genome, persisted | **live** when a key is set, else mocked |
 | GET | `/memory/{id}` | read back a stored genome | live |
-| POST | `/search` | genome → ranked candidates | mocked |
-| POST | `/reconstruct` | memory + candidate → full problem | mocked |
+| POST | `/search` | genome → ranked candidates | **live** |
+| POST | `/reconstruct` | memory + candidate → full problem | **live** |
+| POST | `/contribute/match` | is this problem already in the corpus? | **live** |
+| POST | `/contribute` | create a community problem, or corroborate one | **live** |
 | POST | `/verify` | code → Judge0 results | **live** |
 
 `/problems` returns `{total, limit, offset, problems[]}` — `total` is the count
@@ -115,6 +118,42 @@ for display; `company_count` is the true total.
 shape from `/reconstruct`**. A corpus row is stored text; a reconstructed
 problem also carries `constraints`, `examples`, `confidence` and `provenance`,
 which Gemini produces at reconstruct time and which are not columns.
+
+`/problems/facets` is registered **before** `/problems/{id}`. FastAPI matches
+routes in declaration order, so the other way round `facets` is read as an
+identifier and 404s.
+
+Two things about the `companies` array are worth knowing before you touch that
+SQL. It is ranked by how much of the corpus each company asks, not stored
+order — the column is alphabetical, so slicing it raw put "Accenture, Accolite,
+Adobe" on every single row. The ranking comes from a CTE that unnests the whole
+corpus per request; at 1,124 rows that is a few milliseconds, and unlike a
+hand-written list of "important" companies it stays correct as the corpus grows.
+
+## Contributions
+
+`POST /contribute/match` then `POST /contribute`. Two steps because the
+interesting case is the first one: a user describing a problem we already have
+should be told so, not silently seeded as a near-duplicate. The match step runs
+the ordinary recall pipeline but swallows the 400/404 that mean "nothing found",
+since that is the outcome that justifies contributing.
+
+Creating writes an `origin = 'community'` row with `confidence = 0.35` and logs
+a `contributions` row. Confidence is
+`min(0.95, 0.35 + 0.15 × (contribution_count − 1))` — linear so it can be
+explained in one sentence, capped below 1.0 because a remembered statement never
+becomes as trustworthy as one fetched from LeetCode. Corpus rows stay at 1.0;
+somebody agreeing with LeetCode is not evidence about LeetCode.
+
+The row is inserted with `contribution_count = 0` and `record_contribution()`
+brings it to 1. Seeding the counter at 1 as well double-counted the author, so
+the *second* person to describe a problem jumped it straight to 0.65.
+
+Two failures refuse rather than half-succeed. An empty drafted statement is a
+`422`: a blank description matches everything in vector search. A failed
+embedding is a `503` and saves nothing, because a row with no vector exists in
+the browse list but is invisible to recall — the most confusing possible
+outcome.
 
 ## Code execution (Judge0)
 
@@ -219,19 +258,26 @@ starts from `backend/`, so `import ai.*` did not resolve. `app/__init__.py` now
 puts the repo root on `sys.path`. That would otherwise have surfaced the moment
 someone added a real key.
 
-### Remaining backend tasks
+### Status
 
-| Task | Scope | Blocked by |
-| --- | --- | --- |
-| B10a | ~~`/memory` → `ai.extraction`~~ **done** | — |
-| B10b | `/search` → `ai.retrieval` | `embeddings.py`, `vector_search.py`, `reranker.py` are stubs |
-| B10c | `/reconstruct` → `ai.reconstruction` | `reconstruct.py` is a stub |
-| B10d | test-case generation | `ai/verification/test_generator.py` is a stub |
-
-**`/memory` is live.** Set `GEMINI_API_KEY` and `USE_MOCK_AI=false` to use it.
-With no key it falls back to the mock rather than failing, so a teammate without
-one still gets a correctly shaped response.
+The whole pipeline is wired: `/memory`, `/search`, `/reconstruct`, `/verify` and
+both `/contribute` endpoints call the real AI and database paths. Set
+`GEMINI_API_KEY` and `USE_MOCK_AI=false`. With no key the AI endpoints fall back
+to correctly shaped mocks rather than failing, so a teammate without one can
+still run the frontend — except `POST /contribute` (create), which returns a
+`503` explaining why, since fabricating a corpus row from a mock would be worse
+than refusing.
 
 Done: B1 connection helper · B2 schema split · B3–B4 corpus browse ·
 B5 memory persistence · B6 test cases + submissions · B7–B8 Judge0 ·
-B9 error handling.
+B9 error handling · B10 AI wiring · B11 facets + browse filters ·
+B12 contributions.
+
+### Known gap
+
+`test_cases` rows carry no record of the format they were generated in.
+Validation proves each case is internally consistent — a reference solution was
+executed against it — but nothing stops two batches generated at different times
+from using different stdin shapes for the same problem. `Two Sum` accumulated
+three. Storing the reference solution alongside its cases would fix it
+properly.

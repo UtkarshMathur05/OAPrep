@@ -100,6 +100,11 @@ export interface ProblemSummary {
   popularity: number
   acceptance?: number | null
   recency?: string | null
+  /** 'corpus' shipped with the LeetCode dump; 'community' came from a user. */
+  origin: 'corpus' | 'community'
+  /** 1.0 for corpus rows. Community rows start at 0.35 and climb. */
+  confidence: number
+  contribution_count: number
 }
 
 /** GET /problems/{id} — accepts a UUID or a slug. */
@@ -116,12 +121,72 @@ export interface ProblemListResponse {
   problems: ProblemSummary[]
 }
 
+export type ProblemSort =
+  | 'popularity' | 'title' | 'difficulty' | 'companies' | 'acceptance' | 'newest'
+
 export interface ProblemListParams {
   limit?: number
   offset?: number
   difficulty?: string
   company?: string
+  /** LeetCode tag, verbatim casing: 'Dynamic Programming'. */
+  topic?: string
+  origin?: 'corpus' | 'community'
   search?: string
+  sort?: ProblemSort
+}
+
+// GET /problems/facets
+export interface Facet {
+  name: string
+  count: number
+}
+export interface FacetsResponse {
+  companies: Facet[]
+  topics: Facet[]
+  difficulties: Facet[]
+  totals: { problems: number; community: number; companies: number; topics: number }
+}
+
+// POST /contribute/match
+export interface ContributeMatchRequest {
+  transcript: string
+  top_k?: number
+}
+export interface ContributeMatchResponse {
+  memory_id: string | null
+  memory: Genome
+  candidates: Candidate[]
+  /** The top candidate is close enough that creating a row would duplicate it. */
+  likely_duplicate: boolean
+}
+
+// POST /contribute
+export interface ContributeDetails {
+  title?: string
+  difficulty?: string
+  topics?: string[]
+  companies?: string[]
+  input_format?: string
+  output_format?: string
+  example?: string
+  constraints?: string
+}
+export interface ContributeRequest {
+  transcript: string
+  details?: ContributeDetails
+  /** Set to corroborate an existing problem instead of creating a new one. */
+  confirm_problem_id?: string
+}
+export interface ContributeResponse {
+  problem_id: string
+  slug: string
+  title: string
+  action: 'created' | 'confirmed'
+  confidence: number
+  contribution_count: number
+  test_case_count: number
+  message: string
 }
 
 // POST /verify

@@ -14,10 +14,23 @@ from ai.retrieval.embeddings import embed_text
 
 # `<=>` is cosine distance in [0, 2]; similarity = 1 - distance.
 _SQL = """
+-- Ranks companies by how much of the corpus each asks. The stored array is
+-- alphabetical, so a raw slice put "agoda, amazon" on a candidate card that
+-- Google and Meta also ask. Same expression as the browse endpoint uses, so a
+-- problem reads identically wherever it appears.
+WITH company_rank AS (
+    SELECT company AS name, count(*) AS n
+    FROM problems, unnest(companies) AS company
+    GROUP BY company
+)
 SELECT id::text, slug, title, description, difficulty, source_url,
-       topics, companies, company_count, popularity,
+       topics,
+       (SELECT array_agg(c ORDER BY r.n DESC, c)
+          FROM unnest(p.companies) AS c
+          JOIN company_rank r ON r.name = c) AS companies,
+       company_count, popularity,
        1 - (embedding <=> %(vec)s::vector) AS similarity
-FROM problems
+FROM problems p
 WHERE embedding IS NOT NULL
   {company_filter}
 ORDER BY embedding <=> %(vec)s::vector
@@ -78,9 +91,18 @@ def search_candidates(
 
 
 _BY_ID_SQL = """
+WITH company_rank AS (
+    SELECT company AS name, count(*) AS n
+    FROM problems, unnest(companies) AS company
+    GROUP BY company
+)
 SELECT id::text, slug, title, description, difficulty, source_url,
-       topics, companies, company_count, popularity, 0.0 AS similarity
-FROM problems
+       topics,
+       (SELECT array_agg(c ORDER BY r.n DESC, c)
+          FROM unnest(p.companies) AS c
+          JOIN company_rank r ON r.name = c) AS companies,
+       company_count, popularity, 0.0 AS similarity
+FROM problems p
 WHERE id::text = %(id)s OR slug = %(id)s
 LIMIT 1
 """

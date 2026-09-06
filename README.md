@@ -7,6 +7,12 @@ right or down, and you had to minimize something"). Memoize extracts what you
 actually remember, searches a corpus of known problems, reranks the matches,
 rebuilds the full statement, and then lets you solve and verify it in the browser.
 
+Around that sits an ordinary problem site — 1,124 problems browsable by company,
+topic and difficulty, each one openable in a full-screen editor — plus a
+contribution flow for the problems we do not have. All three share one corpus:
+browsing is how you find a problem you can name, recall is how you find one you
+cannot, and contributing is what happens when neither works.
+
 ---
 
 ## Architecture
@@ -175,6 +181,9 @@ Full contract: [docs/API.md](docs/API.md). Live schema: http://localhost:8000/do
 | POST | `/reconstruct` | memory + candidate → full problem statement |
 | POST | `/verify` | code + language → Judge0 pass/fail |
 | GET | `/problems`, `/problems/{id}` | browse the corpus |
+| GET | `/problems/facets` | company / topic / difficulty counts for the browse nav |
+| POST | `/contribute/match` | do we already have this problem? |
+| POST | `/contribute` | add a community problem, or corroborate one |
 | GET | `/health` | liveness |
 
 ---
@@ -234,6 +243,33 @@ VITE_USE_MOCK=true            frontend alone still demos the whole flow
 Judge0 is the likeliest thing to break on the day — the public CE instance is
 rate-limited and often down, and self-hosting wants privileged containers you do
 not want to debug at hour 30. Keep the mock path working.
+
+## Screens
+
+| Route | What it is |
+| --- | --- |
+| `/` | Landing. The hero is the recall box — the one thing no other OA site does. |
+| `/problems` | The corpus as a filterable table. Every filter lives in the URL. |
+| `/companies`, `/topics` | Directories that feed straight back into `/problems`. |
+| `/problems/:slug` | One problem: statement, metadata, way into the editor. |
+| `/recall` | The four-step vague-memory flow. |
+| `/contribute` | Describe a missing problem; match first, create second. |
+| `/solve/:slug` | Full-screen dark IDE: statement, Monaco, results, elapsed timer. |
+
+`/solve` renders outside the site shell on purpose. Once you are writing code
+the navigation is a distraction, and the only bright thing on the display should
+be the code.
+
+### Design system
+
+IBM Plex Mono is the interface chrome (nav, buttons, labels, counts, table
+heads, metadata); IBM Plex Sans carries prose. One named type scale — `micro
+tiny small base lede h3 h2 h1 display` — and one component vocabulary in
+`src/index.css` (`.shell .band .label .btn-* .card .chip .field .th .td`). Use
+those rather than Tailwind's default sizes, or screens stop matching each other.
+Rules, never shadows; square corners; one loud element per screen.
+
+---
 
 ## Scope
 
