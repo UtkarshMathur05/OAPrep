@@ -53,8 +53,9 @@ export default function ProblemPage() {
         {problem.origin === 'community' && (
           <p className="mt-5 border border-medium/40 border-l-2 border-l-medium bg-medium/10 px-4 py-3 text-small text-ink2">
             This problem was written from a user's description, not fetched from
-            LeetCode. Parts of it are inferred. Its confidence rises each time
-            somebody else independently describes the same problem.
+            a contributor's description rather than a verified source. Parts of
+            it are inferred. Its confidence rises each time somebody else
+            independently describes the same question.
           </p>
         )}
 
@@ -63,19 +64,9 @@ export default function ProblemPage() {
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-          <Link to={`/solve/${problem.slug}`} className="btn-primary">
+          <Link to={`/solve/${problem.slug}`} className="btn-accent">
             solve this problem
           </Link>
-          {problem.source_url && (
-            <a
-              href={problem.source_url}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost"
-            >
-              open on LeetCode
-            </a>
-          )}
           <span className="font-mono text-micro text-ink3">
             {problem.test_case_count > 0
               ? `${problem.test_case_count} stored test ${problem.test_case_count === 1 ? 'case' : 'cases'}`
@@ -99,7 +90,9 @@ export default function ProblemPage() {
             <span className="font-mono text-small text-ink2">{problem.recency ?? '—'}</span>
           </Row>
           <Row label="source">
-            <span className="font-mono text-small capitalize text-ink2">{problem.platform ?? '—'}</span>
+            <span className="font-mono text-small text-ink2">
+              {problem.origin === 'community' ? 'community-contributed' : 'curated'}
+            </span>
           </Row>
         </dl>
 

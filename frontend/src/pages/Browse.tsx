@@ -81,7 +81,7 @@ export default function Browse() {
         company && { key: 'company', label: company },
         topic && { key: 'topic', label: topic },
         difficulty && { key: 'difficulty', label: difficulty },
-        origin && { key: 'origin', label: `${origin} problems` },
+        origin && { key: 'origin', label: origin === 'community' ? 'community' : 'curated' },
         search && { key: 'search', label: `“${search}”` },
       ].filter(Boolean) as { key: string; label: string }[],
     [company, topic, difficulty, origin, search],

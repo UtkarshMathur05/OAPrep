@@ -248,13 +248,19 @@ not want to debug at hour 30. Keep the mock path working.
 
 | Route | What it is |
 | --- | --- |
-| `/` | Landing. The hero is the recall box — the one thing no other OA site does. |
-| `/problems` | The corpus as a filterable table. Every filter lives in the URL. |
+| `/` | Home. Search, the three ways in, then companies, topics and the most-asked list. |
+| `/problems` | The bank as a filterable table. Every filter lives in the URL. |
 | `/companies`, `/topics` | Directories that feed straight back into `/problems`. |
 | `/problems/:slug` | One problem: statement, metadata, way into the editor. |
 | `/recall` | The four-step vague-memory flow. |
 | `/contribute` | Describe a missing problem; match first, create second. |
 | `/solve/:slug` | Full-screen dark IDE: statement, Monaco, results, elapsed timer. |
+
+The home page deliberately does **not** lead with recall. Recall is the
+strongest differentiator but it is not why most people arrive — they arrive for
+"what does company X ask". Leading with the recall box sold one feature and hid
+the bank, so the order is now search → the three ways in → companies → topics →
+problems, with recall as the third and most prominent way in.
 
 `/solve` renders outside the site shell on purpose. Once you are writing code
 the navigation is a distraction, and the only bright thing on the display should

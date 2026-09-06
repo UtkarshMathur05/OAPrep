@@ -30,14 +30,14 @@ export default function Directory({ axis }: { axis: 'company' | 'topic' }) {
           heading: 'Companies',
           blurb:
             'Reported from 41,546 company–question pairs. The count is how many ' +
-            'problems in the corpus have been asked there.',
+            'questions in the bank have been asked there.',
           label: 'Search companies',
         }
       : {
           heading: 'Topics',
           blurb:
-            "LeetCode's own tags, carried through from each problem. They are also " +
-            'what retrieval matches a memory against.',
+            'The tag on each question. They are also what recall matches a ' +
+            'description against.',
           label: 'Search topics',
         }
 

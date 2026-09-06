@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
-import { getFacets } from '../services/api'
+import { useState } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 /**
  * Two groups, not five equal links.
@@ -21,11 +20,8 @@ const DO = [
 ]
 
 export default function Layout() {
-  const [total, setTotal] = useState<number | null>(null)
-
-  useEffect(() => {
-    getFacets().then((f) => setTotal(f.totals.problems)).catch(() => setTotal(null))
-  }, [])
+  const navigate = useNavigate()
+  const [q, setQ] = useState('')
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -41,12 +37,25 @@ export default function Layout() {
             {DO.map((item) => <Tab key={item.to} {...item} accent />)}
           </nav>
 
-          {/* Quiet context rather than a second call to action. The nav already
-              has 'recall'; a button repeating it was the loudest redundant
-              thing on every page. */}
-          <span className="hidden shrink-0 items-center font-mono text-micro text-ink3 lg:flex">
-            {total ? `${total.toLocaleString()} problems indexed` : ''}
-          </span>
+          {/* Search belongs in the chrome, not only on the home page — on a
+              question bank it is the most-used control on every screen. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const term = q.trim()
+              navigate(term ? `/problems?search=${encodeURIComponent(term)}` : '/problems')
+            }}
+            className="hidden shrink-0 items-center self-center md:flex"
+          >
+            <label htmlFor="nav-search" className="sr-only">Search problems</label>
+            <input
+              id="nav-search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="search problems"
+              className="field w-52 py-1.5 font-mono text-micro"
+            />
+          </form>
         </div>
       </header>
 
@@ -57,10 +66,10 @@ export default function Layout() {
       <footer className="border-t border-line">
         <div className="shell flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 py-8">
           <p className="font-mono text-micro text-ink3">
-            statements from LeetCode · community problems labelled and scored
+            community-maintained · every contributed question is labelled and scored
           </p>
           <p className="font-mono text-micro text-ink3">
-            hackathon build · python executed on Judge0
+            solutions run in a sandbox · python
           </p>
         </div>
       </footer>

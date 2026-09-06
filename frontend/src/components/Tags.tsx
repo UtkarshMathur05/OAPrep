@@ -62,7 +62,7 @@ export function Topics({ names, max = 3 }: { names: string[]; max?: number }) {
 /**
  * Trust, shown as a number rather than implied.
  *
- * A corpus row came from LeetCode and is simply a fact, so it says nothing —
+ * A curated question is verified, so it says nothing —
  * a "100%" badge on 1,124 rows would train people to ignore the badge. Only
  * community rows, which are inferences until corroborated, carry one.
  */

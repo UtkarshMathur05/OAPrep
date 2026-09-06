@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
-import Landing from './pages/Landing'
+import Home from './pages/Home'
 import Browse from './pages/Browse'
 import Directory from './pages/Directory'
 import ProblemPage from './pages/ProblemPage'
@@ -14,7 +14,7 @@ export default function App() {
       <Routes>
         {/* Everything inside the site shell. */}
         <Route element={<Layout />}>
-          <Route index element={<Landing />} />
+          <Route index element={<Home />} />
           <Route path="problems" element={<Browse />} />
           <Route path="problems/:slug" element={<ProblemPage />} />
           <Route path="companies" element={<Directory axis="company" />} />
