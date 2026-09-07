@@ -199,7 +199,11 @@ export default function Solve() {
 
   return (
     <div className="flex h-screen flex-col bg-ground text-ink">
-      <header className="flex shrink-0 items-center gap-4 border-b border-line px-4 py-2.5">
+      {/* Wraps to two rows on a phone. In one row the action group ran off the
+          right edge — `submit` was entirely off-screen and the page could be
+          dragged sideways to reach it. */}
+      <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2
+                         border-b border-line px-4 py-2.5 sm:gap-x-4">
         <Link
           to={problem && 'slug' in problem ? `/problems/${problem.slug}` : '/problems'}
           className="font-mono text-micro text-ink3 transition-colors hover:text-ink"
@@ -213,7 +217,7 @@ export default function Solve() {
           </span>
         )}
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex w-full items-center gap-2 sm:w-auto sm:gap-4">
           <span className="num hidden font-mono text-micro text-ink3 sm:inline">
             {runs} {runs === 1 ? 'run' : 'runs'}
           </span>
@@ -232,7 +236,7 @@ export default function Solve() {
           <button
             onClick={() => send('run')}
             disabled={!!running || !problemId}
-            className="btn-ghost"
+            className="btn-ghost ml-auto px-3 py-1.5 text-micro sm:ml-0 sm:px-4 sm:py-2 sm:text-small"
           >
             {running === 'run' ? 'running…' : 'run tests'}
           </button>
@@ -240,17 +244,23 @@ export default function Solve() {
             onClick={() => send('submit')}
             disabled={!!running || !problemId || !proved}
             title={proved ? undefined : 'Run the tests first — submitting needs a passing run'}
-            className="btn-accent"
+            className="btn-accent px-3 py-1.5 text-micro sm:px-4 sm:py-2 sm:text-small"
           >
             {running === 'submit' ? 'submitting…' : 'submit'}
           </button>
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      {/* Stacked below lg. A draggable split needs two columns wide enough to
+          read; at 390px the 42% pane was ~155px and broke the statement to two
+          words a line. The width is handed over as a custom property so the
+          drag still drives it on a wide screen and does nothing on a narrow
+          one — an inline `width` would have won at every size. */}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <section
-          style={{ width: `${split}%` }}
-          className="min-w-0 overflow-y-auto border-r border-line px-6 py-5"
+          style={{ ['--split' as string]: `${split}%` }}
+          className="max-h-[45vh] min-w-0 shrink-0 overflow-y-auto border-b border-line px-5 py-5
+                     sm:px-6 lg:max-h-none lg:w-[var(--split)] lg:shrink lg:border-b-0 lg:border-r"
         >
           {error && !problem && <p role="alert" className="text-hard">{error}</p>}
           {problem && (
@@ -334,7 +344,7 @@ export default function Solve() {
           role="separator"
           aria-orientation="vertical"
           onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize' }}
-          className="w-1 shrink-0 cursor-col-resize bg-line transition-colors hover:bg-accent"
+          className="hidden w-1 shrink-0 cursor-col-resize bg-line transition-colors hover:bg-accent lg:block"
         />
 
         <section className="flex min-w-0 flex-1 flex-col">

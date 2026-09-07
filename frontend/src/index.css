@@ -7,6 +7,11 @@
     color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Reserve the scrollbar's width always. Without this the gutter appears
+       only on pages tall enough to scroll, so every route change nudges the
+       whole layout sideways, and on a classic-scrollbar desktop the right-hand
+       column of the problems table ends up sitting under the scrollbar. */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -69,10 +74,17 @@
   .card { @apply border border-line bg-panel; }
 
   .chip {
-    @apply inline-flex items-center gap-1 border border-line bg-raised
-           px-1.5 py-0.5 font-mono text-micro text-ink2
+    @apply inline-flex min-h-6 items-center gap-1 border border-line bg-raised
+           px-2 py-0.5 font-mono text-micro text-ink2
            transition-colors hover:border-lineStrong hover:text-ink;
   }
+
+  /* A standalone control set in 11px mono is 14px tall, which is under the 24px
+     minimum a finger can reliably hit. This adds the height without changing
+     the type size, so the chrome still reads as chrome. Inline links inside a
+     sentence are exempt and do not get it — padding them would break the
+     line. */
+  .tap { @apply inline-flex min-h-6 items-center; }
 
   /* Inputs read as an editor's find-widget: flat, square, and the border goes
      amber on focus rather than growing a ring. */
@@ -85,6 +97,12 @@
 
   .th { @apply px-3 py-2 text-left font-mono text-micro font-normal text-ink3; }
   .td { @apply px-3 py-2.5 align-middle; }
+  /* The first and last cells sit against the card's border, so they get the
+     card's own inset rather than the inter-column gap. Without it the row's
+     end content is 5px from the rule while everything else is 12px, and the
+     row reads as though it has slipped out of the table. */
+  .th:first-child, .td:first-child { @apply pl-4; }
+  .th:last-child,  .td:last-child  { @apply pr-4; }
 
   /* --- Links ------------------------------------------------------------ */
 

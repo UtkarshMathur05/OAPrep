@@ -82,7 +82,7 @@ export default function VoiceRecorder({ onSubmit, loading, seed }: Props) {
             type="button"
             onClick={toggleRecording}
             aria-pressed={isRecording}
-            className={`flex items-center gap-2 px-1 font-mono text-micro transition-colors
+            className={`flex min-h-6 items-center gap-2 px-1 font-mono text-micro transition-colors
               focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
               ${isRecording ? 'text-accent' : 'text-ink3 hover:text-ink'}`}
           >

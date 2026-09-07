@@ -96,8 +96,20 @@ export default function Browse() {
   )
 
   return (
-    <div className="shell grid gap-10 py-10 lg:grid-cols-[13.5rem_1fr]">
-      <aside className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto">
+    <div className="shell grid gap-10 py-10 lg:grid-cols-[14.75rem_1fr]">
+      {/* Filters come after the results on a phone. Stacked above, the three
+          facet groups are ~800px of chrome before the first problem, so the
+          page opened on a wall of company names and looked like a directory.
+          Below the table they are still one scroll away, which is where every
+          other narrow-screen list puts them. */}
+      {/* `pr-3` and a stable gutter because this column is its own scroll
+          container: with neither, its scrollbar was drawn hard against the
+          right-aligned counts, and it appeared only once the facets were long
+          enough to scroll — so expanding "Show 68 more" shunted every row
+          sideways. The track is 1.25rem wider to pay for both. */}
+      <aside className="order-last lg:order-none lg:sticky lg:top-16
+                        lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto
+                        lg:pr-3 lg:[scrollbar-gutter:stable]">
         <FacetGroup
           title="Difficulty"
           items={facets?.difficulties ?? []}
@@ -124,7 +136,7 @@ export default function Browse() {
         />
       </aside>
 
-      <section className="min-w-0">
+      <section className="order-first min-w-0 lg:order-none">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-h2">Problems</h1>
@@ -134,8 +146,9 @@ export default function Browse() {
               {active.length > 0 && ' matching your filters'}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <form
+              className="w-full min-w-0 sm:w-auto sm:flex-none"
               onSubmit={(e) => {
                 e.preventDefault()
                 setFilter('search', draftSearch.trim())
@@ -153,7 +166,7 @@ export default function Browse() {
               id="sort"
               value={sort}
               onChange={(e) => setFilter('sort', e.target.value)}
-              className="field w-auto font-mono text-micro"
+              className="field w-full font-mono text-micro sm:w-auto"
             >
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
@@ -171,7 +184,7 @@ export default function Browse() {
                   if (f.key === 'search') setDraftSearch('')
                   setFilter(f.key, '')
                 }}
-                className="inline-flex items-center gap-2 border border-lineStrong bg-panel px-2 py-0.5
+                className="inline-flex min-h-6 items-center gap-2 border border-lineStrong bg-panel px-2 py-0.5
                            font-mono text-micro capitalize hover:border-accent hover:text-accent"
               >
                 {f.label}
@@ -181,7 +194,7 @@ export default function Browse() {
             ))}
             <button
               onClick={() => { setDraftSearch(''); setParams(new URLSearchParams()) }}
-              className="px-1 font-mono text-micro text-ink3 link hover:text-ink"
+              className="tap px-1 font-mono text-micro text-ink3 link hover:text-ink"
             >
               Clear all
             </button>
@@ -249,7 +262,7 @@ function FacetGroup({
               <button
                 onClick={() => onSelect(isOn ? '' : item.name)}
                 aria-pressed={isOn}
-                className={`flex w-full items-baseline justify-between gap-2 px-2 py-1 text-left text-small transition-colors
+                className={`flex w-full items-baseline justify-between gap-2 px-2 py-1.5 text-left text-small transition-colors
                   ${isOn ? 'bg-select text-ink' : 'hover:bg-raised hover:text-ink'}`}
               >
                 <span className={`truncate ${capitalize ? 'capitalize' : ''}`}>{item.name}</span>
@@ -264,13 +277,13 @@ function FacetGroup({
       {limit && items.length > limit && (
         <button
           onClick={() => setExpanded((e) => !e)}
-          className="mt-1 px-2 font-mono text-micro text-ink2 link hover:text-ink"
+          className="tap mt-1 px-2 font-mono text-micro text-ink2 link hover:text-ink"
         >
           {expanded ? 'Show fewer' : `Show ${items.length - limit} more`}
         </button>
       )}
       {more && (
-        <Link to={more.to} className="mt-1 block px-2 font-mono text-micro text-link link">
+        <Link to={more.to} className="tap mt-1 px-2 font-mono text-micro text-link link">
           {more.label}
         </Link>
       )}

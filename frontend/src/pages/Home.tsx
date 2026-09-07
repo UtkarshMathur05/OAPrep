@@ -73,7 +73,9 @@ export default function Home() {
             <Link to="/recall" className="text-link link">describe it instead</Link>
           </p>
 
-          <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
+          {/* A grid, not flex-wrap: four stats wrapped 3 + 1 on a phone, which
+              reads as one orphaned number rather than a set. */}
+          <dl className="mt-8 grid grid-cols-2 gap-x-10 gap-y-5 sm:flex sm:flex-wrap">
             {[
               ['problems', t?.problems],
               ['companies', t?.companies],
@@ -204,17 +206,16 @@ export default function Home() {
           </div>
 
           <div className="mt-3 card overflow-x-auto">
-            <table className="w-full min-w-[38rem] table-fixed border-collapse">
-              <colgroup>
-                <col className="w-[46%]" /><col className="w-[14%]" />
-                <col className="w-[28%]" /><col className="w-[12%]" />
-              </colgroup>
+            {/* Widths on the header cells, and topics dropped on a phone, for
+                the same reason as the browse table: a min-width here let the
+                whole page be dragged sideways into empty space. */}
+            <table className="w-full table-fixed border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  <th className="th">problem</th>
-                  <th className="th">difficulty</th>
-                  <th className="th">topics</th>
-                  <th className="th text-right">companies</th>
+                  <th className="th w-[48%] lg:w-[46%]">problem</th>
+                  <th className="th w-[28%] lg:w-[14%]">difficulty</th>
+                  <th className="th hidden lg:table-cell lg:w-[28%]">topics</th>
+                  <th className="th w-[24%] text-right lg:w-[12%]">companies</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -229,7 +230,9 @@ export default function Home() {
                         </Link>
                       </td>
                       <td className="td"><Difficulty value={p.difficulty} /></td>
-                      <td className="td"><TopicsInline names={p.topics} max={2} /></td>
+                      <td className="td hidden lg:table-cell">
+                        <TopicsInline names={p.topics} max={2} />
+                      </td>
                       <td className="num td text-right font-mono text-small text-ink2">
                         {p.company_count}
                       </td>
@@ -313,7 +316,7 @@ function SectionHead({
         <h2 className="text-h2">{title}</h2>
         <p className="mt-1.5 max-w-reading text-small text-ink2">{note}</p>
       </div>
-      <Link to={to} className="font-mono text-micro text-link link">{cta}</Link>
+      <Link to={to} className="tap font-mono text-micro text-link link">{cta}</Link>
     </div>
   )
 }

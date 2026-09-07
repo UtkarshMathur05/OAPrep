@@ -22,7 +22,7 @@ export default function ProblemPage() {
     return (
       <div className="shell max-w-reading py-20">
         <p role="alert" className="text-ink2">{error}</p>
-        <Link to="/problems" className="mt-3 inline-block text-small text-link link">
+        <Link to="/problems" className="tap mt-3 text-small text-link link">
           Back to all problems
         </Link>
       </div>
@@ -40,7 +40,7 @@ export default function ProblemPage() {
   return (
     <div className="shell grid gap-10 py-10 lg:grid-cols-[1fr_16rem]">
       <article className="min-w-0">
-        <Link to="/problems" className="font-mono text-micro text-ink3 hover:text-ink">
+        <Link to="/problems" className="tap font-mono text-micro text-ink3 hover:text-ink">
           ← all problems
         </Link>
 
@@ -137,7 +137,7 @@ export default function ProblemPage() {
           <p className="text-small text-ink2">
             Not quite the one you were thinking of?
           </p>
-          <Link to="/recall" className="mt-1 inline-block text-small text-link link">
+          <Link to="/recall" className="tap mt-1 text-small text-link link">
             Describe what you remember instead
           </Link>
         </div>

@@ -49,27 +49,29 @@ export default function ProblemTable({
 
   return (
     <div className="card overflow-x-auto">
-      <table className="w-full min-w-[52rem] table-fixed border-collapse">
-        {/* Fixed widths: without them the columns resize as you page through,
-            and a table whose grid moves is harder to read than a list. */}
-        <colgroup>
-          <col className="w-[3%]" />
-          <col className="w-[28%]" />
-          <col className="w-[10%]" />
-          <col className="w-[25%]" />
-          <col className="w-[20%]" />
-          <col className="w-[8%]" />
-          <col className="w-[6%]" />
-        </colgroup>
+      {/* Widths live on the header cells rather than a <colgroup> because they
+          have to change per breakpoint and a <col> cannot be hidden reliably.
+          `table-fixed` still takes its grid from this first row, so the columns
+          stay put as you page through — which was the point of the colgroup.
+
+          Nothing is side-scrolled on a phone. A 7-column table forced a 52rem
+          minimum, and that minimum escaped the scroll container: the whole page
+          could be dragged 457px into empty space, which is the "page slides
+          sideways" bug. Dropping to three columns on a small screen fixes that
+          at the cause, and a table you scroll horizontally on a phone was not
+          worth keeping anyway. */}
+      <table className="w-full table-fixed border-collapse">
         <thead>
           <tr className="border-b border-line">
-            <th className="th"><span className="sr-only">Status</span></th>
-            <th className="th">problem</th>
-            <th className="th">difficulty</th>
-            <th className="th">topics</th>
-            <th className="th">asked at</th>
-            <th className="th text-right">accepted</th>
-            <th className="th" />
+            <th className="th w-8"><span className="sr-only">Status</span></th>
+            <th className="th w-[46%] sm:w-[38%] lg:w-[26%]">problem</th>
+            <th className="th w-[26%] sm:w-[16%] lg:w-[13%]">difficulty</th>
+            <th className="th hidden lg:table-cell lg:w-[19%]">topics</th>
+            <th className="th hidden lg:table-cell lg:w-[20%]">asked at</th>
+            <th className="th hidden text-right sm:table-cell sm:w-[16%] lg:w-[11%]">accepted</th>
+            <th className="th w-[22%] text-right sm:w-[16%] lg:w-[9%]">
+              <span className="sr-only">Solve</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -89,16 +91,21 @@ export default function ProblemTable({
                 </Link>
               </td>
               <td className="td"><Difficulty value={p.difficulty} /></td>
-              <td className="td"><TopicsInline names={p.topics} max={2} /></td>
-              <td className="td"><Companies names={p.companies} total={p.company_count} /></td>
-              <td className="num td text-right font-mono text-small text-ink2">
+              <td className="td hidden lg:table-cell"><TopicsInline names={p.topics} max={2} /></td>
+              <td className="td hidden lg:table-cell">
+                <Companies names={p.companies} total={p.company_count} />
+              </td>
+              <td className="num td hidden text-right font-mono text-small text-ink2 sm:table-cell">
                 {p.acceptance != null ? `${p.acceptance.toFixed(0)}%` : '—'}
               </td>
               <td className="td text-right">
+                {/* Dim rather than invisible. Hover-only revealed it to a mouse
+                    and to nothing else — a touch screen has no hover, so on a
+                    phone this column was permanently empty. */}
                 <Link
                   to={`/solve/${p.slug}`}
-                  className="font-mono text-micro text-ink3 opacity-0 transition-opacity
-                             group-hover:opacity-100 focus:opacity-100 hover:text-accent"
+                  className="tap justify-end font-mono text-micro text-ink3/60 transition-colors
+                             group-hover:text-ink3 hover:!text-accent focus-visible:!text-accent"
                 >
                   solve
                 </Link>

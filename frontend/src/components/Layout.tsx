@@ -9,14 +9,20 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
  * identical links said they were the same kind of thing. A rule between them
  * says they are not, and costs nothing.
  */
+// `narrow: false` means the tab is dropped on a phone. Five tabs plus the
+// wordmark need ~570px, so on a 390px screen `recall` and `contribute` — the
+// two things this site is for — sat off the right edge of a scroller with no
+// affordance saying to scroll. Companies and Topics are pure directories,
+// reachable from the home page and from the filters on /problems, so they are
+// what gives way.
 const BROWSE = [
-  { to: '/problems', label: 'problems' },
-  { to: '/companies', label: 'companies' },
-  { to: '/topics', label: 'topics' },
+  { to: '/problems', label: 'problems', narrow: true },
+  { to: '/companies', label: 'companies', narrow: false },
+  { to: '/topics', label: 'topics', narrow: false },
 ]
 const DO = [
-  { to: '/recall', label: 'recall' },
-  { to: '/contribute', label: 'contribute' },
+  { to: '/recall', label: 'recall', narrow: true },
+  { to: '/contribute', label: 'contribute', narrow: true },
 ]
 
 export default function Layout() {
@@ -26,14 +32,14 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-lineStrong bg-ground/95 backdrop-blur">
-        <div className="shell flex h-16 items-stretch gap-6">
+        <div className="shell flex h-16 items-stretch gap-3 sm:gap-6">
           <Link to="/" className="flex shrink-0 items-center font-mono text-base font-semibold tracking-tight">
             memoize<span className="text-accent">/</span>
           </Link>
 
           <nav className="flex min-w-0 flex-1 items-stretch overflow-x-auto">
             {BROWSE.map((item) => <Tab key={item.to} {...item} />)}
-            <span aria-hidden className="my-4 mx-3 w-px shrink-0 bg-line" />
+            <span aria-hidden className="mx-2 my-4 w-px shrink-0 bg-line sm:mx-3" />
             {DO.map((item) => <Tab key={item.to} {...item} accent />)}
           </nav>
 
@@ -45,7 +51,7 @@ export default function Layout() {
               const term = q.trim()
               navigate(term ? `/problems?search=${encodeURIComponent(term)}` : '/problems')
             }}
-            className="hidden shrink-0 items-center self-center md:flex"
+            className="hidden shrink-0 items-center self-center lg:flex"
           >
             <label htmlFor="nav-search" className="sr-only">Search problems</label>
             <input
@@ -95,12 +101,14 @@ export default function Layout() {
  * A real tab: the active underline sits flush on the header's bottom rule
  * rather than floating above it, so the two rules meet instead of stacking.
  */
-function Tab({ to, label, accent }: { to: string; label: string; accent?: boolean }) {
+function Tab({ to, label, accent, narrow = true }:
+             { to: string; label: string; accent?: boolean; narrow?: boolean }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `relative flex shrink-0 items-center px-3 font-mono text-small transition-colors
+        `relative flex shrink-0 items-center px-2.5 font-mono text-small transition-colors sm:px-3
+         ${narrow ? '' : 'hidden sm:flex'}
          after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:transition-colors
          ${isActive
            ? 'text-ink after:bg-accent'
