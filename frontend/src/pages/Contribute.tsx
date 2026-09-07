@@ -232,7 +232,6 @@ export default function Contribute() {
           <div className="mt-5 flex items-baseline gap-6 border-y border-line py-4">
             <Stat label="Confidence" value={`${Math.round(result.confidence * 100)}%`} />
             <Stat label="Descriptions" value={String(result.contribution_count)} />
-            <Stat label="Test cases" value={String(result.test_case_count)} />
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">

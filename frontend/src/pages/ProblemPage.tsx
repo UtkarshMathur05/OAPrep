@@ -78,21 +78,15 @@ export default function ProblemPage() {
               <Link to={`/solve/${problem.slug}`} className="btn-accent">
                 solve this problem
               </Link>
-              {problem.source_url && (
-                <a
-                  href={problem.source_url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="btn-ghost"
-                >
-                  open on LeetCode
-                </a>
+              {/* How many tests there are is not the reader's business before
+                  they solve it — it is a hint about the shape of the answer,
+                  and it goes stale the moment a run generates more. The one
+                  thing worth saying is why a first run might be slow. */}
+              {problem.test_case_count === 0 && (
+                <span className="font-mono text-micro text-ink3">
+                  Test cases are prepared on your first run
+                </span>
               )}
-              <span className="font-mono text-micro text-ink3">
-                {problem.test_case_count > 0
-                  ? `${problem.test_case_count} stored test ${problem.test_case_count === 1 ? 'case' : 'cases'}`
-                  : 'Test cases are generated on your first run'}
-              </span>
             </div>
           ) : (
             /* No editor for a problem the judge can never return a verdict on.
