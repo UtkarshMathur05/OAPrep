@@ -3,12 +3,14 @@
 // so the UI can be built before the backend exists.
 
 import axios from 'axios'
+import { getSessionId } from '../lib/session'
 import type {
   ProblemDetail, ProblemListParams, ProblemListResponse,
   MemoryRequest, MemoryResponse,
   SearchRequest, SearchResponse,
   ReconstructRequest, ReconstructResponse,
   VerifyRequest, VerifyResponse,
+  Language, ProblemProgress, SessionProgress,
   FacetsResponse,
   ContributeMatchRequest, ContributeMatchResponse,
   ContributeRequest, ContributeResponse,
@@ -23,6 +25,13 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 export const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
   headers: { 'Content-Type': 'application/json' },
+})
+
+// Every request carries the session, so no call site has to remember to. When
+// real auth lands this interceptor is where the token goes instead.
+client.interceptors.request.use((config) => {
+  config.headers.set('X-Session-Id', getSessionId())
+  return config
 })
 
 const mock = <T>(data: T, ms = 400): Promise<T> =>
@@ -84,5 +93,22 @@ export async function submitContribution(
   body: ContributeRequest,
 ): Promise<ContributeResponse> {
   const { data } = await client.post<ContributeResponse>('/contribute', body)
+  return data
+}
+
+export async function getLanguages(): Promise<Language[]> {
+  const { data } = await client.get<Language[]>('/languages')
+  return data
+}
+
+/** Solved and attempted slugs for this session, for marking a listing. */
+export async function getProgress(): Promise<SessionProgress> {
+  const { data } = await client.get<SessionProgress>('/progress')
+  return data
+}
+
+/** This session's standing on one problem. Accepts a UUID or a slug. */
+export async function getProblemProgress(idOrSlug: string): Promise<ProblemProgress> {
+  const { data } = await client.get<ProblemProgress>(`/progress/${idOrSlug}`)
   return data
 }

@@ -161,6 +161,65 @@ script, not a method (§9), and `starter_code` is written to match.
 
 ---
 
+## Identity
+
+Every request may carry an `X-Session-Id` header holding a UUID the browser
+generates once and keeps. It identifies a **browser, not a person** — there is
+no authentication yet — and it is what runs, submissions and contributions are
+attributed to.
+
+Omitting it is supported everywhere: the call still works, it just accumulates
+no progress. A malformed value degrades to anonymous rather than `400`-ing a
+request that would otherwise succeed.
+
+> Server-side this is resolved in exactly one place, `app/identity.py`. When
+> accounts land, that function starts returning a user id and no other module
+> changes — which is why the column exists now rather than later.
+
+---
+
+## GET /languages
+
+Every language a solution can be written in, with the starter program for it.
+
+```json
+[
+  { "id": "python", "label": "Python 3", "monaco": "python", "starter": "import sys\n..." },
+  { "id": "cpp", "label": "C++", "monaco": "cpp", "starter": "#include <bits/stdc++.h>\n..." }
+]
+```
+
+The starter lives server-side so the editor and the runner can never disagree
+about the calling convention. `monaco` is the editor's own language id, for
+syntax highlighting.
+
+**Adding a language costs a Judge0 id and a starter template — nothing else.**
+Because a solution is a whole program over stdin/stdout rather than a function
+body, the stored test cases are identical for every language, so a new one
+needs no driver and no regenerated cases.
+
+---
+
+## GET /progress
+
+What the calling session has done, for marking a listing in one request.
+
+```json
+{ "solved": ["triangle"], "attempted": ["two-sum"], "runs": 12, "solved_count": 1 }
+```
+
+Slugs, not ids, because that is what the listing and the URLs use.
+
+## GET /progress/{id}
+
+The calling session's standing on one problem. Accepts a UUID or a slug.
+
+```json
+{ "runs": 4, "submissions": 1, "solved": true, "best_passed": 2, "total": 2 }
+```
+
+---
+
 ## POST /verify
 
 Run submitted code against the problem's test cases via Judge0.
@@ -251,8 +310,36 @@ Accolite, Adobe" on every row — accurate and useless.
 
 Accepts **either a UUID or a slug**, so `/problems/two-sum` works.
 
-Returns one `ProblemSummary` plus `description`, `has_embedding` (whether it is
-searchable yet) and `test_case_count`. `404` with `{"detail": "..."}` when absent.
+Returns one `ProblemSummary` plus `description`, `exec_mode`, `signature`,
+`code_snippets`, `runnable_languages`, `io_format`, `has_embedding` (whether it
+is searchable yet) and `test_case_count`.
+
+`exec_mode` decides how the problem is solved:
+
+* `"functional"` — write the method the statement describes. `signature` is
+  LeetCode-shaped `{name, params, return}`, `code_snippets` maps our language id
+  to that problem's starter, and `io_format` is empty because there is no stdin
+  to describe.
+* `"stdin"` — write a whole program. `io_format` states what it reads;
+  `signature` is null and `code_snippets` is empty.
+
+`runnable_languages` is what the editor must offer. A functional problem needs
+both a starter and a harness for a language, so the list is usually shorter than
+the eleven in `GET /languages`; a stdin problem lists all of them.
+
+`io_format` is the stdin contract in prose, e.g.
+
+```
+Line 1: two integers m and n, the number of rows and columns.
+Next m lines: n integers each, the grid rows.
+Output: a single integer, the minimum path sum.
+```
+
+Solutions here are whole programs reading stdin, not function bodies, so this is
+load-bearing: a statement written for a function signature never says which line
+the target is on. Empty string when no format has been pinned down — render
+nothing rather than a guess. `POST /reconstruct` returns the same field on its
+`problem`. `404` with `{"detail": "..."}` when absent.
 
 > This is **not** the same shape as `/reconstruct`'s `problem`. A corpus row is
 > stored text; a reconstructed problem carries `constraints`, `examples` and

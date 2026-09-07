@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { FacetsResponse, ProblemSort, ProblemSummary } from '../types'
-import { getFacets, listProblems } from '../services/api'
+import { getFacets, getProgress, listProblems } from '../services/api'
 import ProblemTable from '../components/ProblemTable'
 
 const PAGE = 25
@@ -27,6 +27,8 @@ export default function Browse() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [draftSearch, setDraftSearch] = useState(params.get('search') ?? '')
+  const [solved, setSolved] = useState<Set<string>>(new Set())
+  const [attempted, setAttempted] = useState<Set<string>>(new Set())
 
   const company = params.get('company') ?? ''
   const topic = params.get('topic') ?? ''
@@ -38,6 +40,10 @@ export default function Browse() {
 
   useEffect(() => {
     getFacets().then(setFacets).catch(() => setFacets(null))
+    // One call for the whole listing: marking 25 rows must not be 25 requests.
+    getProgress()
+      .then((p) => { setSolved(new Set(p.solved)); setAttempted(new Set(p.attempted)) })
+      .catch(() => undefined)
   }, [])
 
   useEffect(() => {
@@ -186,7 +192,7 @@ export default function Browse() {
           </div>
         ) : (
           <div className="mt-5">
-            <ProblemTable problems={problems} loading={loading} />
+            <ProblemTable problems={problems} loading={loading} solved={solved} attempted={attempted} />
           </div>
         )}
 

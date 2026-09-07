@@ -31,6 +31,10 @@ class Problem(BaseModel):
     id: Optional[str] = None
     title: str
     description: str
+    # The stdin contract, stated rather than inferred from the examples. An
+    # upstream statement is written for a function signature and never says
+    # which line the target is on; here that decides whether a solution parses.
+    io_format: str = ""
     constraints: List[str] = Field(default_factory=list)
     examples: List[Example] = Field(default_factory=list)
     confidence: float = 0.0

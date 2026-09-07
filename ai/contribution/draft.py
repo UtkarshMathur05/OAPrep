@@ -35,6 +35,10 @@ class DraftedProblem(BaseModel):
     topics: List[str] = Field(default_factory=list)
     constraints: List[str] = Field(default_factory=list)
     examples: List[WorkedExample] = Field(default_factory=list)
+    # The stdin contract the examples obey. The contributor is asked for it
+    # directly ("input_format"/"output_format"); this is that answer, tidied
+    # into the one shape the rest of the system stores.
+    io_format: str = ""
     # What the user never said and the model filled in. Rendered to the
     # contributor so they can correct it before it is stored.
     assumptions: List[str] = Field(default_factory=list)
@@ -56,6 +60,10 @@ Rules:
   Pick the simplest whitespace-separated shape - sizes first, then values - and
   use the same shape in every example. Omit examples entirely rather than
   guessing a format that contradicts what they described.
+- "io_format" states that shape in words: one line per line of stdin, then a
+  required final line starting "Output:". Be unambiguous about order — "an array and a target" does
+  not say which comes first. If they told you an input or output format, use
+  theirs. Leave it "" if you left out the examples too.
 - The description must not mention the user, this system, or uncertainty. Write
   it the way a problem set would.
 

@@ -43,18 +43,18 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Backend | Python, FastAPI, Pydantic, Uvicorn | Sync endpoints, raw SQL via `psycopg` — no ORM |
 | AI / RAG | Gemini 3.1 Flash Lite + `gemini-embedding-001` | Native `response_schema` output; disk-cached |
 | Database | PostgreSQL 16 + pgvector (Docker) | Exact vector scan, no ANN index |
-| Execution | Judge0 API | Python only, batch endpoint, 5 test cases |
+| Execution | Judge0 API | Functional or stdin, batch endpoint, 5 test cases |
 
 ### Why these narrowings
 
 Each one removes hours of work without removing anything the demo shows.
 
-- **Python-only execution.** Judge0 speaks stdin/stdout; coding problems are
-  function-signature shaped. Every extra language needs its own driver that parses
-  stdin, calls the function, and prints the result. One language, one template.
-- **stdin/stdout problem format, decided up front.** `test_cases.input` is
-  literally what Judge0 receives; `expected_output` is compared to stdout. Change
-  this late and every generated test case has to be regenerated.
+- **stdin/stdout as transport, not as the interface.** Judge0 only speaks
+  stdin/stdout, so that is how it is driven. But the statements are written for a
+  function signature, so on most problems a harness deserialises the arguments,
+  calls your method and serialises what it returns. Problems with no function to
+  call — LRU Cache, Min Stack — keep the plain stdin contract and state their
+  input format.
 - **Gemini structured output.** `response_schema` with a Pydantic model, rather
   than asking for JSON in the prompt and repairing what comes back.
 - **No ANN index.** At 500–5000 problems an exact scan is ~2ms, while `ivfflat`
@@ -184,6 +184,8 @@ Full contract: [docs/API.md](docs/API.md). Live schema: http://localhost:8000/do
 | GET | `/problems/facets` | company / topic / difficulty counts for the browse nav |
 | POST | `/contribute/match` | do we already have this problem? |
 | POST | `/contribute` | add a community problem, or corroborate one |
+| GET | `/languages` | supported languages + their starter programs |
+| GET | `/progress`, `/progress/{id}` | what this session has solved and attempted |
 | GET | `/health` | liveness |
 
 ---
@@ -254,7 +256,7 @@ not want to debug at hour 30. Keep the mock path working.
 | `/problems/:slug` | One problem: statement, metadata, way into the editor. |
 | `/recall` | The four-step vague-memory flow. |
 | `/contribute` | Describe a missing problem; match first, create second. |
-| `/solve/:slug` | Full-screen dark IDE: statement, Monaco, results, elapsed timer. |
+| `/solve/:slug` | Full-screen IDE: statement, Monaco, 11 languages, run/submit, elapsed timer. |
 
 The home page deliberately does **not** lead with recall. Recall is the
 strongest differentiator but it is not why most people arrive — they arrive for
@@ -265,6 +267,42 @@ problems, with recall as the third and most prominent way in.
 `/solve` renders outside the site shell on purpose. Once you are writing code
 the navigation is a distraction, and the only bright thing on the display should
 be the code.
+
+### Solving
+
+Most problems are solved the way the statement describes them — you write the
+method, and the arguments arrive as the examples show them:
+
+```python
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+```
+
+Answers are compared as values, not text, so `[0,1]` and `[0, 1]` are the same
+answer, and problems whose statements say the order is free are judged that way.
+
+These run in **Python, Java, C++ and C**, each with its own harness converting
+the arguments to that language's types — `vector<int>` in C++, `int[]` in Java,
+and in C the `(int* nums, int numsSize)` pair LeetCode's own starters declare.
+
+Problems with no single function to call keep the stdin contract, where a
+solution is a whole program and the input format is stated on the problem. Those
+run in all eleven languages — Python, C++, Java, JavaScript, C, Go, C#, Kotlin,
+Ruby, Rust, TypeScript — from the same stored test cases.
+
+The editor only ever lists what a problem can actually run.
+
+**Run** is a trial; **Submit** is the claim that you are done, and only an
+accepted submit marks a problem complete. Submit stays disabled until a run has
+passed, and goes back to disabled the moment the code changes — the passing run
+described the old code.
+
+Progress (solved, attempted, run counts) is attributed to an `X-Session-Id` the
+browser generates and keeps. There are no accounts yet, so it identifies a
+browser rather than a person; `backend/app/identity.py` is the single seam that
+becomes a user id when auth lands.
+
+---
 
 ### Design system
 
@@ -326,7 +364,7 @@ docker compose up -d
 docker compose logs -f db          # first boot only: watch the init scripts land
 
 # 2. Backend + AI — one venv covers both
-source venv/bin/activate
+source venv/bin/activate 
 cd backend && uvicorn app.main:app --reload --port 8000
 
 # 3. Frontend
@@ -411,3 +449,17 @@ nothing.
 | Port 8000 in use | An orphaned uvicorn — `ss -ltnp \| grep 8000`, then kill by PID |
 | Schema edits have no effect | Init scripts only run on an empty volume; `docker compose down -v` |
 | Everything 502s on verify | Judge0 CE is down. `USE_MOCK_AI=true` keeps the flow demoable |
+
+## Attribution
+
+Curated question statements, function signatures and worked examples are sourced
+from [LeetCode](https://leetcode.com) via their public GraphQL endpoint, and
+remain the property of their respective owners. Memoize is not affiliated with
+or endorsed by LeetCode. This is stated in the site footer as well as here.
+
+Community-contributed questions are written by people using the site. They are
+labelled `community` throughout, carry a confidence score, and are never mixed
+with curated rows without that label.
+
+The company-frequency data in `data/leetcode-companywise-interview-questions/`
+is a publicly published dataset of interview question frequencies.

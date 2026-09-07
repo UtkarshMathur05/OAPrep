@@ -1,11 +1,22 @@
 """Judge0 client. The frontend never talks to Judge0 directly.
 
-MVP scope is Python only: Judge0 takes stdin and returns stdout, but coding
-problems are function-signature shaped, so every extra language needs its own
-driver that parses stdin, calls the function and prints the result.
+Two execution modes, and Judge0 sees the same thing either way — stdin in,
+stdout out. What differs is who writes the parsing.
 
-Contract: `test_cases.input` is sent verbatim on stdin; stdout is compared to
-`expected_output` after stripping trailing whitespace.
+**functional** (`problems.exec_mode`): the person writes the function the
+statement describes. `app.harness` appends a driver that reads one JSON argument
+per line, calls their method, and prints the return value; answers are compared
+as JSON values, so `[0,1]` and `[0, 1]` are the same answer. Requires a typed
+signature, which for corpus problems comes from LeetCode's own `metaData`.
+
+**stdin**: the original contract, still the default. `test_cases.input` is sent
+verbatim and stdout is compared after stripping trailing whitespace. Problems
+with no signature — class-design questions like LRU Cache, and anything a
+harness has no type for — stay here rather than being forced.
+
+Every supported language lives in `app.languages`. In stdin mode adding one
+costs a Judge0 id and a starter; in functional mode it also costs a harness,
+which is the price of the person not having to write a parser.
 """
 
 from __future__ import annotations
@@ -17,10 +28,12 @@ import httpx
 from app.config import JUDGE0_API_HOST, JUDGE0_API_KEY, JUDGE0_URL
 from app.schemas.verify import TestResult, VerifyRequest, VerifyResponse
 
-# Judge0 language ids — see GET {JUDGE0_URL}/languages
-LANGUAGE_IDS = {
-    "python": 71,
-}
+from app import harness
+from app.languages import BY_ID, DEFAULT, get as get_language
+
+# Kept as a mapping for callers that only need the id. The registry in
+# app.languages is the source of truth.
+LANGUAGE_IDS = {key: lang.judge0_id for key, lang in BY_ID.items()}
 
 MAX_TEST_CASES = 5
 JUDGE0_TIMEOUT_SECONDS = 20.0
@@ -44,21 +57,42 @@ def _normalise(text: str | None) -> str:
     return (text or "").rstrip()
 
 
-def run_submission(req: VerifyRequest, test_cases: list[dict]) -> VerifyResponse:
-    """Run `req.code` against every test case and aggregate the outcome."""
-    language_id = LANGUAGE_IDS.get(req.language.lower())
-    if language_id is None:
+def run_submission(req: VerifyRequest, test_cases: list[dict],
+                   problem: dict | None = None) -> VerifyResponse:
+    """Run `req.code` against every test case and aggregate the outcome.
+
+    `problem` carries `exec_mode`, `signature` and `judge_mode`. Omitted, or
+    without a signature, the run is a plain stdin one — which is what every
+    caller got before functional mode existed.
+    """
+    language = get_language(req.language)
+    if language is None:
         supported = ", ".join(sorted(LANGUAGE_IDS))
         return VerifyResponse(
             status=f"Unsupported language '{req.language}' (supported: {supported})",
             passed=0, total=len(test_cases),
         )
+    language_id = language.judge0_id
     if not test_cases:
         return VerifyResponse(status="No test cases", passed=0, total=0)
 
     cases = test_cases[:MAX_TEST_CASES]
+    problem = problem or {}
+    functional = (problem.get("exec_mode") == "functional"
+                  and harness.supports(req.language, problem.get("signature")))
+
+    if problem.get("exec_mode") == "functional" and not functional:
+        # Being explicit beats running their function body as a program and
+        # reporting a syntax error they cannot act on.
+        return VerifyResponse(
+            status=f"{language.label} is not available for this problem yet",
+            passed=0, total=len(cases),
+        )
+
+    source = (harness.build(req.language, problem["signature"], req.code)
+              if functional else req.code)
     submissions = [
-        {"language_id": language_id, "source_code": req.code, "stdin": c["input"]}
+        {"language_id": language_id, "source_code": source, "stdin": c["input"]}
         for c in cases
     ]
 
@@ -71,7 +105,9 @@ def run_submission(req: VerifyRequest, test_cases: list[dict]) -> VerifyResponse
             passed=0, total=len(cases),
         )
 
-    return _aggregate(cases, outputs)
+    return _aggregate(cases, outputs,
+                      functional=functional,
+                      judge_mode=problem.get("judge_mode") or "exact")
 
 
 def run_reference(code: str, inputs: list[str]) -> list[str | None]:
@@ -86,7 +122,7 @@ def run_reference(code: str, inputs: list[str]) -> list[str | None]:
         return [None] * len(inputs)
 
     submissions = [
-        {"language_id": LANGUAGE_IDS["python"], "source_code": code, "stdin": stdin}
+        {"language_id": LANGUAGE_IDS[DEFAULT], "source_code": code, "stdin": stdin}
         for stdin in inputs
     ]
     try:
@@ -126,7 +162,9 @@ def _run_batch(submissions: list[dict]) -> list[dict]:
         raise httpx.TimeoutException("Judge0 did not settle within the poll budget")
 
 
-def _aggregate(cases: list[dict], outputs: list[dict]) -> VerifyResponse:
+def _aggregate(cases: list[dict], outputs: list[dict], *,
+               functional: bool = False,
+               judge_mode: str = "exact") -> VerifyResponse:
     """Turn per-case Judge0 rows into one VerifyResponse."""
     results: list[TestResult] = []
     passed = 0
@@ -140,7 +178,14 @@ def _aggregate(cases: list[dict], outputs: list[dict]) -> VerifyResponse:
         expected = _normalise(case["expected_output"])
         # Judge0 says "Accepted" when the program merely ran; correctness is ours
         # to decide, since we never send it an expected_output.
-        ok = status == "Accepted" and actual == expected
+        if status != "Accepted":
+            ok = False
+        elif functional:
+            # Values, not text: languages space their JSON differently, and a
+            # problem may accept any order.
+            ok = harness.compare(expected, actual, judge_mode)
+        else:
+            ok = actual == expected
         passed += ok
 
         if not ok and worst is None:

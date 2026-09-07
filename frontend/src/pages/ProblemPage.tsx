@@ -59,7 +59,16 @@ export default function ProblemPage() {
           </p>
         )}
 
-        <div className="mt-7 max-w-reading whitespace-pre-wrap leading-relaxed text-ink2">
+        {problem.io_format && (
+          <section className="mt-7 max-w-reading border-l-2 border-accent bg-panel px-3 py-2">
+            <h2 className="label">Input format</h2>
+            <pre className="mt-1 whitespace-pre-wrap font-mono text-micro leading-relaxed text-ink">
+              {problem.io_format}
+            </pre>
+          </section>
+        )}
+
+        <div className="mt-6 max-w-reading whitespace-pre-wrap leading-relaxed text-ink2">
           {problem.description}
         </div>
 

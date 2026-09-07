@@ -29,6 +29,17 @@ Example of the right shape:
 with the description explaining that the first line holds the dimensions and
 the following lines hold the grid rows.
 
+Put that explanation in "io_format" as well, on its own, as one line per line of
+stdin followed by a required final line starting "Output:" — the shape of what
+gets printed is half the contract, and a solution that prints "[0, 1]" where we
+expect "0 1" fails every test. This is the contract every test case and
+every solution must agree on, so be unambiguous about order — "an array and a
+target" does not say which comes first. For the example above:
+  "Line 1: two integers m and n, the number of rows and columns.
+   Next m lines: n integers each, the grid rows.
+   Output: a single integer, the minimum path sum."
+Every example you give must parse under exactly this format.
+
 PROVENANCE — this is the point of the product:
 For each of "title", "description", "constraints" and "examples", say where it
 came from:

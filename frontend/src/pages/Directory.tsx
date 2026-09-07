@@ -70,7 +70,7 @@ export default function Directory({ axis }: { axis: 'company' | 'topic' }) {
             <Link
               key={facet.name}
               to={`/problems?${axis}=${encodeURIComponent(facet.name)}`}
-              className="group flex items-baseline justify-between gap-3 bg-panel px-4 py-3 transition-colors hover:bg-ground"
+              className="group flex items-baseline justify-between gap-3 bg-panel px-4 py-3 transition-colors hover:bg-raised"
             >
               <span className={`truncate text-small ${axis === 'company' ? 'capitalize' : ''} group-hover:underline`}>
                 {facet.name}

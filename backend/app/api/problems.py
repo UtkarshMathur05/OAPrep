@@ -47,4 +47,23 @@ def get_problem(problem_id: str) -> ProblemDetail:
     row = database_service.get_problem(problem_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"No problem matching '{problem_id}'")
-    return ProblemDetail(**row)
+    return ProblemDetail(**row, runnable_languages=_runnable(row))
+
+
+def _runnable(row: dict) -> list[str]:
+    """Languages this problem can actually be solved in.
+
+    A functional problem needs both a starter for the language and a harness
+    that can express its types, so the list is usually shorter than the eleven
+    we can execute. Offering a language that answers "not available yet" the
+    moment you press Run is worse than not offering it.
+    """
+    from app import harness
+    from app.languages import LANGUAGES
+
+    if row.get("exec_mode") != "functional":
+        return [lang.id for lang in LANGUAGES]
+
+    snippets = row.get("code_snippets") or {}
+    return [lang.id for lang in LANGUAGES
+            if lang.id in snippets and harness.supports(lang.id, row.get("signature"))]

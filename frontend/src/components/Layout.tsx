@@ -69,7 +69,24 @@ export default function Layout() {
             community-maintained · every contributed question is labelled and scored
           </p>
           <p className="font-mono text-micro text-ink3">
-            solutions run in a sandbox · python
+            solutions run in a sandbox · 11 languages
+          </p>
+        </div>
+        {/* Attribution, not a feature callout. Curated questions are not ours:
+            the statements, function signatures and worked examples come from
+            LeetCode, and saying so is the difference between reuse and passing
+            it off. Contributed questions are written by people here, which is
+            why the two are named separately. */}
+        <div className="shell border-t border-line py-5">
+          <p className="max-w-reading font-mono text-micro leading-relaxed text-ink3">
+            Curated question statements, function signatures and worked examples
+            are sourced from{' '}
+            <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer"
+               className="link">LeetCode</a>
+            , and remain the property of their respective owners. Memoize is not
+            affiliated with or endorsed by LeetCode. Community-contributed
+            questions are written by people using this site and are labelled as
+            such throughout.
           </p>
         </div>
       </footer>

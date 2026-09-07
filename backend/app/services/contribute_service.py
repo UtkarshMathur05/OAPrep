@@ -59,14 +59,14 @@ def match(req: ContributeMatchRequest) -> ContributeMatchResponse:
     )
 
 
-def submit(req: ContributeRequest) -> ContributeResponse:
+def submit(req: ContributeRequest, session_id=None) -> ContributeResponse:
     """Either corroborate an existing problem or create a community one."""
     if req.confirm_problem_id:
-        return _confirm(req)
-    return _create(req)
+        return _confirm(req, session_id)
+    return _create(req, session_id)
 
 
-def _confirm(req: ContributeRequest) -> ContributeResponse:
+def _confirm(req: ContributeRequest, session_id=None) -> ContributeResponse:
     problem_id = database_service.resolve_problem_id(req.confirm_problem_id)
     if problem_id is None:
         raise HTTPException(404, "That problem no longer exists.")
@@ -77,6 +77,7 @@ def _confirm(req: ContributeRequest) -> ContributeResponse:
         kind="confirmed",
         transcript=req.transcript,
         details=req.details.model_dump(),
+        session_id=session_id,
     )
     community = row["origin"] == "community"
     return ContributeResponse(
@@ -88,6 +89,9 @@ def _confirm(req: ContributeRequest) -> ContributeResponse:
         contribution_count=result["contribution_count"],
         test_case_count=row.get("test_case_count", 0),
         message=(
+            "You have already vouched for this one — your earlier description "
+            "is still on file, and confidence only moves for independent accounts."
+            if not result.get("counted", True) else
             f"Thanks — that is {result['contribution_count']} independent "
             f"descriptions of this problem, so its confidence is now "
             f"{result['confidence']:.0%}."
@@ -98,7 +102,7 @@ def _confirm(req: ContributeRequest) -> ContributeResponse:
     )
 
 
-def _create(req: ContributeRequest) -> ContributeResponse:
+def _create(req: ContributeRequest, session_id=None) -> ContributeResponse:
     if USE_MOCK_AI or not GEMINI_API_KEY:
         raise HTTPException(
             503, "Contributing needs the AI pipeline. Set USE_MOCK_AI=false with a "
@@ -147,7 +151,8 @@ def _create(req: ContributeRequest) -> ContributeResponse:
     # 1. Seeding the counter at 1 as well double-counted the author, so the
     # second person to describe a problem pushed it straight to 0.65.
     recorded = database_service.record_contribution(
-        created["id"], kind="created", transcript=req.transcript, details=details)
+        created["id"], kind="created", transcript=req.transcript, details=details,
+        session_id=session_id)
 
     stored = _seed_test_cases(created["id"], drafted)
 
@@ -195,9 +200,14 @@ def _seed_test_cases(problem_id: str, drafted) -> int:
         if (e.input or "").strip() and (e.output or "").strip()
     ]
     if not cases:
+        # Still record the format if the drafter pinned one down: it is what a
+        # later generation must obey, and what the solver has to be shown.
+        if getattr(drafted, "io_format", ""):
+            database_service.set_io_format(problem_id, drafted.io_format)
         return 0
     try:
-        return database_service.save_test_cases(problem_id, cases)
+        return database_service.save_test_cases(
+            problem_id, cases, io_format=getattr(drafted, "io_format", ""))
     except Exception:  # noqa: BLE001 - never lose the problem over its examples
         log.warning("could not store contributed examples", exc_info=True)
         return 0

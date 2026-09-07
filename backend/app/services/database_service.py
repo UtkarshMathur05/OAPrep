@@ -141,6 +141,11 @@ def get_problem(problem_id: str) -> Optional[dict]:
         {_COMPANY_RANK_CTE}
         SELECT {_SUMMARY_COLS},
                description,
+               coalesce(io_format, '') AS io_format,
+               exec_mode,
+               signature,
+               judge_mode,
+               coalesce(code_snippets, '{{}}'::jsonb) AS code_snippets,
                embedding IS NOT NULL AS has_embedding,
                (SELECT count(*) FROM test_cases t WHERE t.problem_id = p.id)
                    AS test_case_count
@@ -235,38 +240,69 @@ def resolve_problem_id(problem_id: str) -> Optional[str]:
     return row["id"] if row else None
 
 
-def save_test_cases(problem_id: str, cases) -> int:
-    """Persist generated cases. Returns how many were newly stored.
+def save_test_cases(problem_id: str, cases, io_format: str = "") -> int:
+    """Persist a problem's test cases. Returns how many were stored.
 
-    Idempotent on (problem_id, input): generation runs once per problem ever,
-    and a second visit reads from Postgres instead of spending a request.
+    **First writer wins.** A problem that already has cases keeps them, and this
+    is a no-op. That is a correctness rule, not an optimisation: solutions here
+    are whole programs reading stdin, so a case is only meaningful under one
+    input format, and two reconstructions of the same problem routinely choose
+    different ones. The previous version was idempotent on `input` alone, which
+    happily merged both — two-sum accumulated nine cases in three shapes and
+    became unsolvable. Cases are trustworthy as a set; they do not compose.
+
+    `io_format` is stored with them so the format is stated on the problem
+    rather than left to be inferred from the examples.
     """
     canonical = resolve_problem_id(problem_id)
     if canonical is None or not cases:
         return 0
 
+    if query_one("SELECT 1 AS x FROM test_cases WHERE problem_id = %s LIMIT 1",
+                 (canonical,)):
+        return 0
+
     stored = 0
     for case in cases:
-        row = execute(
+        execute(
             """
             INSERT INTO test_cases (problem_id, input, expected_output)
-            SELECT %(pid)s, %(input)s, %(expected)s
-            WHERE NOT EXISTS (
-                SELECT 1 FROM test_cases
-                WHERE problem_id = %(pid)s AND input = %(input)s
-            )
-            RETURNING id::text AS id
+            VALUES (%(pid)s, %(input)s, %(expected)s)
             """,
             {"pid": canonical,
              "input": (case.input or "").rstrip(),
              "expected": (case.expected_output or "").rstrip()},
         )
-        stored += row is not None
+        stored += 1
+
+    if io_format.strip():
+        set_io_format(canonical, io_format)
     return stored
 
 
-def save_submission(problem_id: str, code: str, language: str, result) -> Optional[str]:
-    """Record a run. `result` is a schemas.verify.VerifyResponse.
+def set_io_format(problem_id: str, io_format: str) -> None:
+    """Record the stdin contract for a problem. Never overwrites a stated one:
+    the format the stored cases obey is the one people have been solving."""
+    execute(
+        """
+        UPDATE problems SET io_format = %(fmt)s
+        WHERE (id = %(pid)s OR slug = %(slug)s)
+          AND coalesce(io_format, '') = ''
+        """,
+        {"fmt": io_format.strip(), "pid": _as_uuid(problem_id), "slug": problem_id},
+    )
+
+
+def save_submission(
+    problem_id: str,
+    code: str,
+    language: str,
+    result,
+    *,
+    kind: str = "run",
+    session_id=None,
+) -> Optional[str]:
+    """Record a run or a submit. `result` is a schemas.verify.VerifyResponse.
 
     Returns None when the problem does not exist — a submission row would
     violate the FK, and a failed audit write must not sink the user's result.
@@ -277,13 +313,82 @@ def save_submission(problem_id: str, code: str, language: str, result) -> Option
 
     row = execute(
         """
-        INSERT INTO submissions (problem_id, code, language, status, runtime, memory)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO submissions
+            (problem_id, code, language, status, runtime, memory,
+             kind, passed, total, session_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id::text AS id
         """,
-        (canonical, code, language, result.status, result.runtime, result.memory),
+        (canonical, code, language, result.status, result.runtime, result.memory,
+         kind, result.passed, result.total, session_id),
     )
     return row["id"]
+
+
+# ------------------------------------------------------------------- progress
+
+def problem_progress(session_id, problem_id: str) -> dict:
+    """How far this session has got with one problem.
+
+    `solved` is an accepted **submit**, not an accepted run: a run that happens
+    to pass is a trial, and treating it as completion would take the decision
+    away from the user.
+    """
+    canonical = resolve_problem_id(problem_id)
+    if canonical is None or session_id is None:
+        return {"runs": 0, "submissions": 0, "solved": False, "best_passed": 0, "total": 0}
+
+    row = query_one(
+        """
+        SELECT
+            count(*) FILTER (WHERE kind = 'run')    AS runs,
+            count(*) FILTER (WHERE kind = 'submit') AS submissions,
+            bool_or(kind = 'submit' AND total > 0 AND passed = total) AS solved,
+            coalesce(max(passed), 0) AS best_passed,
+            coalesce(max(total), 0)  AS total
+        FROM submissions
+        WHERE session_id = %s AND problem_id = %s
+        """,
+        (session_id, canonical),
+    )
+    return {
+        "runs": row["runs"] or 0,
+        "submissions": row["submissions"] or 0,
+        "solved": bool(row["solved"]),
+        "best_passed": row["best_passed"] or 0,
+        "total": row["total"] or 0,
+    }
+
+
+def session_progress(session_id) -> dict:
+    """Every problem this session has touched, split into solved and attempted.
+
+    Slugs rather than ids, because that is what the listing and the URLs use.
+    One query for the whole listing: marking 25 rows must not be 25 round trips.
+    """
+    if session_id is None:
+        return {"solved": [], "attempted": [], "runs": 0, "solved_count": 0}
+
+    rows = query(
+        """
+        SELECT p.slug,
+               bool_or(s.kind = 'submit' AND s.total > 0 AND s.passed = s.total) AS solved,
+               count(*) FILTER (WHERE s.kind = 'run') AS runs
+        FROM submissions s
+        JOIN problems p ON p.id = s.problem_id
+        WHERE s.session_id = %s
+        GROUP BY p.slug
+        """,
+        (session_id,),
+    )
+    solved = [r["slug"] for r in rows if r["solved"]]
+    attempted = [r["slug"] for r in rows if not r["solved"]]
+    return {
+        "solved": sorted(solved),
+        "attempted": sorted(attempted),
+        "runs": sum(r["runs"] or 0 for r in rows),
+        "solved_count": len(solved),
+    }
 
 
 # ----------------------------------------------------------------------- facets
@@ -437,6 +542,7 @@ def record_contribution(
     kind: str,
     transcript: str,
     details: Optional[dict] = None,
+    session_id=None,
 ) -> dict:
     """Log a contribution and return the problem's new confidence.
 
@@ -447,13 +553,32 @@ def record_contribution(
     """
     import json
 
-    execute(
+    # ON CONFLICT DO NOTHING against uq_contribution_per_session: confidence
+    # measures how many *independent* people described the same problem, so a
+    # second account from one session must not move it. Returns no row when the
+    # insert was skipped, which is exactly the signal we need below.
+    inserted = query_one(
         """
-        INSERT INTO contributions (problem_id, kind, transcript, details)
-        VALUES (%s, %s, %s, %s::jsonb)
+        INSERT INTO contributions (problem_id, kind, transcript, details, session_id)
+        VALUES (%s, %s, %s, %s::jsonb, %s)
+        ON CONFLICT DO NOTHING
+        RETURNING id::text AS id
         """,
-        [_as_uuid(problem_id), kind, transcript, json.dumps(details or {})],
+        [_as_uuid(problem_id), kind, transcript, json.dumps(details or {}), session_id],
     )
+
+    if inserted is None:
+        # Already counted this session. Report the standing truthfully rather
+        # than erroring: from the user's point of view their account is on file.
+        current = query_one(
+            "SELECT origin, confidence, contribution_count FROM problems WHERE id = %s",
+            [_as_uuid(problem_id)],
+        ) or {}
+        return {
+            "confidence": float(current.get("confidence") or 0.0),
+            "contribution_count": current.get("contribution_count") or 0,
+            "counted": False,
+        }
 
     row = query_one(
         """
@@ -465,15 +590,20 @@ def record_contribution(
         [_as_uuid(problem_id)],
     )
     if row is None:
-        return {"confidence": 0.0, "contribution_count": 0}
+        return {"confidence": 0.0, "contribution_count": 0, "counted": False}
 
     if row["origin"] != "community":
         return {
             "confidence": 1.0,
             "contribution_count": row["contribution_count"],
+            "counted": True,
         }
 
     confidence = community_confidence(row["contribution_count"])
     execute("UPDATE problems SET confidence = %s WHERE id = %s",
             [confidence, _as_uuid(problem_id)])
-    return {"confidence": confidence, "contribution_count": row["contribution_count"]}
+    return {
+        "confidence": confidence,
+        "contribution_count": row["contribution_count"],
+        "counted": True,
+    }

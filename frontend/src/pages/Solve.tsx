@@ -1,81 +1,138 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
+import type { Language, Problem, ProblemDetail, VerifyResponse } from '../types'
+import { getLanguages, getProblem, getProblemProgress, verifySolution } from '../services/api'
 import { MEMOIZE_DARK, defineTheme } from '../lib/monacoTheme'
-import type { Problem, ProblemDetail, VerifyResponse } from '../types'
-import { getProblem, verifySolution } from '../services/api'
 import Timer from '../components/Timer'
 
-const STARTER = `import sys
-
-def main():
-    data = sys.stdin.read().split()
-    # your solution here
-    print(0)
-
-if __name__ == "__main__":
-    main()
-`
+const LANG_KEY = 'memoize.language'
 
 /**
  * The solve environment.
  *
  * Full-bleed and dark, outside the site shell: once you are writing code the
- * site's navigation is a distraction, and the only bright thing on the display
- * should be the code. Statement left, editor right, results under the editor —
- * the layout every online judge uses, because it is the one where you can read
- * the failing input without losing your place in the code.
+ * navigation is a distraction. Statement left, editor right, results under the
+ * editor — the layout every judge uses, because it is the one where you can
+ * read a failing input without losing your place in the code.
+ *
+ * Run and Submit are different acts. Run is a trial and costs nothing; Submit
+ * is the claim that you are finished, and only an accepted Submit completes the
+ * problem. Submit therefore stays disabled until a Run has actually passed, and
+ * goes back to disabled the moment the code changes — the evidence was about
+ * the old code.
  */
 export default function Solve() {
   const { slug = '' } = useParams()
   const location = useLocation()
 
-  // The recall flow hands its reconstructed problem over in router state, so
-  // the user solves the statement they were just shown rather than the corpus
-  // row it was rebuilt from.
   const handed = (location.state as { problem?: Problem } | null)?.problem ?? null
 
   const [problem, setProblem] = useState<ProblemDetail | Problem | null>(handed)
-  const [code, setCode] = useState(handed?.starter_code || STARTER)
+  const [allLanguages, setAllLanguages] = useState<Language[]>([])
+  const [langId, setLangId] = useState<string>(
+    () => localStorage.getItem(LANG_KEY) ?? 'python',
+  )
+  // One buffer per language, so switching to compare an approach and switching
+  // back does not throw away what you wrote.
+  const [buffers, setBuffers] = useState<Record<string, string>>({})
   const [result, setResult] = useState<VerifyResponse | null>(null)
-  const [running, setRunning] = useState(false)
+  const [running, setRunning] = useState<'run' | 'submit' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [solved, setSolved] = useState(false)
+  const [runs, setRuns] = useState(0)
+  const [proved, setProved] = useState(false)   // a Run passed for the code as it stands
   const [split, setSplit] = useState(42)
+
+  const detail = problem && 'exec_mode' in problem ? problem : null
+  const functional = detail?.exec_mode === 'functional'
+
+  // Only what this problem can actually run. A functional problem needs both a
+  // starter and a harness for the language; until the detail loads we show the
+  // full list rather than an empty picker.
+  const languages = useMemo(() => {
+    const allowed = detail?.runnable_languages
+    if (!allowed?.length) return allLanguages
+    return allLanguages.filter((l) => allowed.includes(l.id))
+  }, [allLanguages, detail])
+
+  const language = useMemo(
+    () => languages.find((l) => l.id === langId) ?? null,
+    [languages, langId],
+  )
+  const code = buffers[langId] ?? ''
+
+  useEffect(() => { getLanguages().then(setAllLanguages).catch(() => setAllLanguages([])) }, [])
 
   useEffect(() => {
     if (handed) return
-    getProblem(slug)
-      .then((p) => setProblem(p))
-      .catch(() => setError('We could not load that problem.'))
+    getProblem(slug).then(setProblem).catch(() => setError('We could not load that problem.'))
   }, [slug, handed])
+
+  // Progress survives a reload: the counter is the database's, not the tab's.
+  useEffect(() => {
+    if (!slug) return
+    getProblemProgress(slug)
+      .then((p) => { setSolved(p.solved); setRuns(p.runs) })
+      .catch(() => undefined)
+  }, [slug])
+
+  // The remembered language may not be one this problem supports. Move to one
+  // it does instead of leaving the editor on a language that cannot run.
+  useEffect(() => {
+    if (!languages.length || languages.some((l) => l.id === langId)) return
+    setLangId(languages[0].id)
+  }, [languages, langId])
+
+  // Seed a buffer the first time a language is shown.
+  //
+  // Three sources, most specific first: the problem's own starter for this
+  // language (functional problems carry one per language, written for their
+  // signature), then a reconstruction's Python starter, then the generic
+  // stdin template.
+  useEffect(() => {
+    // Wait for the problem, not just the language list. /languages usually wins
+    // the race, and seeding from it first would lock in the generic stdin
+    // template for a functional problem — whose own starter then never applies,
+    // because a seeded buffer is never re-seeded.
+    if (!language || !problem || buffers[language.id] !== undefined) return
+    const seed = detail?.code_snippets?.[language.id]
+      ?? (language.id === 'python' && handed?.starter_code
+        ? handed.starter_code
+        : language.starter)
+    setBuffers((b) => ({ ...b, [language.id]: seed }))
+  }, [language, buffers, handed, detail, problem])
 
   const problemId = (problem as ProblemDetail | null)?.id ?? handed?.id ?? null
 
-  const run = useCallback(async () => {
-    if (!problemId) return
-    setRunning(true)
+  const send = useCallback(async (kind: 'run' | 'submit') => {
+    if (!problemId || !code.trim()) return
+    setRunning(kind)
     setError(null)
     setResult(null)
     try {
-      setResult(await verifySolution({ problem_id: problemId, code, language: 'python' }))
+      const res = await verifySolution({ problem_id: problemId, code, language: langId, kind })
+      setResult(res)
+      setSolved(res.solved)
+      setRuns(res.runs)
+      if (kind === 'run') setProved(res.all_passed)
     } catch {
-      setError('The run did not come back. Judge0 may be rate-limited — try again in a moment.')
+      setError('The run did not come back. The judge may be rate-limited — try again in a moment.')
     } finally {
-      setRunning(false)
+      setRunning(null)
     }
-  }, [problemId, code])
+  }, [problemId, code, langId])
 
-  // ⌘↵ runs, the way every judge does it.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        run()
+        send(e.shiftKey && proved ? 'submit' : 'run')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [run])
+  }, [send, proved])
 
   const dragging = useRef(false)
   useEffect(() => {
@@ -89,40 +146,107 @@ export default function Solve() {
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
   }, [])
 
+  const changeLanguage = (id: string) => {
+    setLangId(id)
+    localStorage.setItem(LANG_KEY, id)
+    setResult(null)
+    setProved(false)   // the passing run was about the other language
+  }
+
+  const editCode = (next: string) => {
+    setBuffers((b) => ({ ...b, [langId]: next }))
+    // The proof was about the code that ran, not the code on screen.
+    if (proved) setProved(false)
+  }
+
   return (
     <div className="flex h-screen flex-col bg-ground text-ink">
       <header className="flex shrink-0 items-center gap-4 border-b border-line px-4 py-2.5">
-        <Link to={problem && 'slug' in problem ? `/problems/${problem.slug}` : '/problems'}
-              className="text-sm text-ink3 transition-colors hover:text-ink">
-          ← Back
+        <Link
+          to={problem && 'slug' in problem ? `/problems/${problem.slug}` : '/problems'}
+          className="font-mono text-micro text-ink3 transition-colors hover:text-ink"
+        >
+          ← back
         </Link>
         <span className="truncate font-medium">{problem?.title ?? 'Loading…'}</span>
+        {solved && (
+          <span className="shrink-0 border border-easy/40 bg-easy/10 px-2 py-0.5 font-mono text-micro text-easy">
+            solved
+          </span>
+        )}
 
         <div className="ml-auto flex items-center gap-4">
+          <span className="num hidden font-mono text-micro text-ink3 sm:inline">
+            {runs} {runs === 1 ? 'run' : 'runs'}
+          </span>
           <Timer />
-          <span className="font-mono text-micro text-ink3">Python 3</span>
-          <button onClick={run} disabled={running || !problemId}
-                  className="btn bg-accent px-4 text-deep hover:bg-accent/90">
-            {running ? 'Running…' : 'Run tests'}
+
+          <label htmlFor="lang" className="sr-only">Language</label>
+          <select
+            id="lang"
+            value={langId}
+            onChange={(e) => changeLanguage(e.target.value)}
+            className="field w-auto py-1 font-mono text-micro"
+          >
+            {languages.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+          </select>
+
+          <button
+            onClick={() => send('run')}
+            disabled={!!running || !problemId}
+            className="btn-ghost"
+          >
+            {running === 'run' ? 'running…' : 'run tests'}
+          </button>
+          <button
+            onClick={() => send('submit')}
+            disabled={!!running || !problemId || !proved}
+            title={proved ? undefined : 'Run the tests first — submitting needs a passing run'}
+            className="btn-accent"
+          >
+            {running === 'submit' ? 'submitting…' : 'submit'}
           </button>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* Statement */}
-        <section style={{ width: `${split}%` }}
-                 className="min-w-0 overflow-y-auto border-r border-line px-6 py-5">
+        <section
+          style={{ width: `${split}%` }}
+          className="min-w-0 overflow-y-auto border-r border-line px-6 py-5"
+        >
           {error && !problem && <p role="alert" className="text-hard">{error}</p>}
           {problem && (
             <>
-              <h1 className="text-xl font-semibold tracking-tight">{problem.title}</h1>
-              <div className="mt-4 max-w-reading whitespace-pre-wrap text-sm leading-relaxed text-ink2">
+              <h1 className="text-h3">{problem.title}</h1>
+
+              {/* Above the statement, deliberately. Curated statements are
+                  written for a function signature and show arguments as array
+                  literals (`triangle = [[2],[3,4]]`), which is not what your
+                  program reads. Whoever sees that first will write the wrong
+                  parser, so the real contract goes first. */}
+              {problem.io_format && (
+                <section className="mt-4 border-l-2 border-accent bg-panel px-3 py-2">
+                  <h2 className="label">Input format</h2>
+                  <pre className="mt-1 whitespace-pre-wrap font-mono text-micro leading-relaxed text-ink">
+                    {problem.io_format}
+                  </pre>
+                  {'origin' in problem && problem.origin === 'corpus' && (
+                    <p className="mt-2 text-micro leading-relaxed text-ink3">
+                      The examples in the statement below are written as array
+                      literals. That is not what your program reads — read stdin
+                      exactly as described here.
+                    </p>
+                  )}
+                </section>
+              )}
+
+              <div className="mt-5 max-w-reading whitespace-pre-wrap text-small leading-relaxed text-ink2">
                 {problem.description}
               </div>
 
               {'constraints' in problem && problem.constraints?.length > 0 && (
                 <>
-                  <h2 className="mt-6 text-sm font-medium">Constraints</h2>
+                  <h2 className="mt-6 text-small font-medium">Constraints</h2>
                   <ul className="mt-2 space-y-1 font-mono text-micro text-ink2">
                     {problem.constraints.map((c) => <li key={c}>{c}</li>)}
                   </ul>
@@ -131,7 +255,7 @@ export default function Solve() {
 
               {'examples' in problem && problem.examples?.length > 0 && (
                 <>
-                  <h2 className="mt-6 text-sm font-medium">Examples</h2>
+                  <h2 className="mt-6 text-small font-medium">Examples</h2>
                   <div className="mt-2 space-y-3">
                     {problem.examples.map((ex, i) => (
                       <div key={i} className="border border-line bg-panel p-3 font-mono text-micro">
@@ -146,9 +270,23 @@ export default function Solve() {
                 </>
               )}
 
-              <p className="mt-8 border-t border-line pt-4 text-micro text-ink3">
-                Your program reads the whole of stdin and prints the answer to
-                stdout. Test inputs are given exactly as shown above.
+              <p className="mt-8 border-t border-line pt-4 font-mono text-micro leading-relaxed text-ink3">
+                {functional ? (
+                  <>
+                    Fill in the method above and return the answer. Arguments
+                    arrive exactly as the examples show them, so there is
+                    nothing to parse.
+                  </>
+                ) : (
+                  <>
+                    Your program reads all of stdin and prints the answer to
+                    stdout.
+                    {problem.io_format
+                      ? ' Read it exactly as the input format describes.'
+                      : ' Test inputs are given exactly as shown above.'}{' '}
+                    The same cases run against every language.
+                  </>
+                )}
               </p>
             </>
           )}
@@ -158,23 +296,23 @@ export default function Solve() {
           role="separator"
           aria-orientation="vertical"
           onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize' }}
-          className="w-1 shrink-0 cursor-col-resize bg-lineStrong transition-colors hover:bg-accent"
+          className="w-1 shrink-0 cursor-col-resize bg-line transition-colors hover:bg-accent"
         />
 
-        {/* Editor + console */}
         <section className="flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1">
             <Editor
               height="100%"
-              language="python"
+              language={language?.monaco ?? 'python'}
+              path={`solution.${langId}`}
               value={code}
               theme={MEMOIZE_DARK}
               beforeMount={defineTheme}
-              onChange={(v) => setCode(v ?? '')}
+              onChange={(v) => editCode(v ?? '')}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                fontFamily: '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
                 padding: { top: 16, bottom: 16 },
                 scrollBeyondLastLine: false,
                 smoothScrolling: true,
@@ -183,7 +321,7 @@ export default function Solve() {
               }}
             />
           </div>
-          <Console result={result} running={running} error={error} />
+          <Console result={result} running={running} error={error} proved={proved} solved={solved} />
         </section>
       </div>
     </div>
@@ -191,24 +329,27 @@ export default function Solve() {
 }
 
 function Console({
-  result, running, error,
-}: { result: VerifyResponse | null; running: boolean; error: string | null }) {
+  result, running, error, proved, solved,
+}: {
+  result: VerifyResponse | null
+  running: 'run' | 'submit' | null
+  error: string | null
+  proved: boolean
+  solved: boolean
+}) {
   const [open, setOpen] = useState(true)
-  const passed = result ? result.passed === result.total && result.total > 0 : false
+  const passed = result ? result.all_passed : false
   const failing = result?.results?.find((r) => !r.passed)
 
   return (
     <div className="shrink-0 border-t border-line bg-panel">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-4 py-2 text-left"
-      >
-        <span className="text-sm">Results</span>
-        {running && <span className="font-mono text-micro text-accent">running…</span>}
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-2 text-left">
+        <span className="font-mono text-small">results</span>
+        {running && <span className="font-mono text-micro text-accent">{running}ning…</span>}
         {result && (
           <>
-            <span className={`text-sm font-medium ${passed ? 'text-easy' : 'text-hard'}`}>
-              {passed ? 'Accepted' : result.status}
+            <span className={`font-mono text-small ${passed ? 'text-easy' : 'text-hard'}`}>
+              {result.status}
             </span>
             <span className="num font-mono text-micro text-ink3">
               {result.passed}/{result.total} passed
@@ -217,16 +358,16 @@ function Console({
             </span>
           </>
         )}
-        <span className="ml-auto text-micro text-ink3">{open ? 'Hide' : 'Show'}</span>
+        <span className="ml-auto font-mono text-micro text-ink3">{open ? 'hide' : 'show'}</span>
       </button>
 
       {open && (
         <div className="max-h-56 overflow-y-auto border-t border-line px-4 py-3">
-          {error && <p role="alert" className="text-sm text-hard">{error}</p>}
+          {error && <p role="alert" className="text-small text-hard">{error}</p>}
 
           {!result && !running && !error && (
-            <p className="text-sm text-ink3">
-              Run your solution to see how it does against the stored test cases.
+            <p className="text-small text-ink3">
+              Run your solution against the stored test cases.
               <span className="ml-2 font-mono text-micro">⌘↵</span>
             </p>
           )}
@@ -239,20 +380,33 @@ function Console({
                     key={r.index}
                     title={`Case ${r.index + 1}: ${r.passed ? 'passed' : 'failed'}`}
                     className={`num flex h-6 w-6 items-center justify-center font-mono text-micro
-                      ${r.passed ? 'bg-easy/20 text-easy' : 'bg-hard/20 text-hard'}`}
+                      ${r.passed ? 'bg-easy/15 text-easy' : 'bg-hard/15 text-hard'}`}
                   >
                     {r.index + 1}
                   </span>
                 ))}
               </div>
 
+              {/* The one line that tells you what to do next. */}
+              {result.kind === 'submit' && result.all_passed ? (
+                <p className="mt-3 border-t border-line pt-3 font-mono text-micro text-easy">
+                  accepted — marked complete after {result.runs}{' '}
+                  {result.runs === 1 ? 'run' : 'runs'} and {result.submissions}{' '}
+                  {result.submissions === 1 ? 'submission' : 'submissions'}
+                </p>
+              ) : proved && !solved ? (
+                <p className="mt-3 border-t border-line pt-3 font-mono text-micro text-accent">
+                  all tests pass — submit to mark this complete
+                </p>
+              ) : null}
+
               {failing && (
                 <dl className="mt-3 grid gap-x-4 gap-y-1 border-t border-line pt-3 font-mono text-micro sm:grid-cols-[5rem_1fr]">
-                  <dt className="text-ink3">Input</dt>
+                  <dt className="text-ink3">input</dt>
                   <dd className="whitespace-pre-wrap break-all text-ink">{failing.input}</dd>
-                  <dt className="text-ink3">Expected</dt>
+                  <dt className="text-ink3">expected</dt>
                   <dd className="whitespace-pre-wrap break-all text-ink">{failing.expected_output}</dd>
-                  <dt className="text-ink3">Got</dt>
+                  <dt className="text-ink3">got</dt>
                   <dd className="whitespace-pre-wrap break-all text-hard">
                     {failing.actual_output || '(nothing)'}
                   </dd>

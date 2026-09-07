@@ -68,6 +68,15 @@ export default function ProblemDisplay({ problem }: { problem: Problem }) {
           </p>
         </Section>
 
+        {problem.io_format && (
+          <Section title="Input format" field="description" problem={problem}>
+            <pre className="whitespace-pre-wrap border-l-2 border-accent bg-raised
+                            px-3 py-2 font-mono text-sm leading-relaxed">
+              {problem.io_format}
+            </pre>
+          </Section>
+        )}
+
         {problem.constraints?.length > 0 && (
           <Section title="Limits" field="constraints" problem={problem}>
             <ul className="space-y-1">

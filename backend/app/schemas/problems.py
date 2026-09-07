@@ -6,7 +6,7 @@ reconstructed problem are different things: `constraints`, `examples` and
 columns, so a listing must not promise them.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -39,6 +39,21 @@ class ProblemDetail(ProblemSummary):
     """A single corpus row, including its statement."""
 
     description: str
+    # How the solution reads stdin. Empty when the problem has no tests yet;
+    # rendering a guessed format would be worse than rendering none.
+    io_format: str = ""
+    # 'functional' — write the function the statement describes; 'stdin' — write
+    # a whole program. Which one decides what the editor seeds and how answers
+    # are compared, so the UI has to know.
+    exec_mode: str = "stdin"
+    # LeetCode-shaped {"name", "params", "return"}. Present only when functional.
+    signature: Optional[dict] = None
+    # Our language id -> starter code. Per problem, because the signature is.
+    code_snippets: Dict[str, str] = Field(default_factory=dict)
+    # Which languages can actually run this problem right now. For a functional
+    # problem that is the languages with both a starter and a harness; for a
+    # stdin problem it is all of them.
+    runnable_languages: List[str] = Field(default_factory=list)
     has_embedding: bool = False
     test_case_count: int = 0
 

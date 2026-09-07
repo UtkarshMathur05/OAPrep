@@ -3,7 +3,9 @@
 Thin: validate, delegate to contribute_service, return.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+
+from app.identity import current_session
 
 from app.schemas.contribute import (
     ContributeMatchRequest, ContributeMatchResponse,
@@ -21,6 +23,6 @@ def contribute_match(req: ContributeMatchRequest) -> ContributeMatchResponse:
 
 
 @router.post("/contribute", response_model=ContributeResponse)
-def contribute(req: ContributeRequest) -> ContributeResponse:
+def contribute(req: ContributeRequest, request: Request) -> ContributeResponse:
     """Create a community problem, or corroborate an existing one."""
-    return contribute_service.submit(req)
+    return contribute_service.submit(req, current_session(request))

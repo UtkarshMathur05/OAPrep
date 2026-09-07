@@ -189,7 +189,8 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
     try:
         from ai.verification.test_generator import cases_from_examples
 
-        database_service.save_test_cases(candidate.id, cases_from_examples(problem))
+        database_service.save_test_cases(
+            candidate.id, cases_from_examples(problem), io_format=problem.io_format)
     except Exception as exc:  # noqa: BLE001 - never fail a reconstruction over this
         log.warning("could not store examples as test cases: %s", exc)
 
@@ -197,6 +198,7 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
         id=candidate.id,
         title=problem.title,
         description=problem.description,
+        io_format=problem.io_format,
         constraints=problem.constraints,
         # The ai models use WorkedExample / ProblemProvenance rather than the
         # dicts this schema takes: Gemini rejects `additionalProperties` in a

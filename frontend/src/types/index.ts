@@ -65,6 +65,13 @@ export interface Problem {
   id?: string | null
   title: string
   description: string
+  /**
+   * How the solution reads stdin, in prose. Solutions here are whole programs
+   * over stdin, not function bodies, so the statement alone never says which
+   * line the target is on. Empty when nobody has pinned the format down —
+   * render nothing rather than a guess.
+   */
+  io_format: string
   constraints: string[]
   examples: Example[]
   confidence: number
@@ -110,6 +117,30 @@ export interface ProblemSummary {
 /** GET /problems/{id} — accepts a UUID or a slug. */
 export interface ProblemDetail extends ProblemSummary {
   description: string
+  /**
+   * 'functional' — write the function the statement describes, the way the
+   * statement describes it. 'stdin' — write a whole program that reads stdin,
+   * which is where class-design problems and anything the harness has no type
+   * for still live.
+   */
+  exec_mode: 'functional' | 'stdin'
+  /** {name, params, return} when functional. The editor does not read it. */
+  signature: Record<string, unknown> | null
+  /** Our language id -> starter code. Per problem, because the signature is. */
+  code_snippets: Record<string, string>
+  /**
+   * Languages this problem can actually run in. Shorter than the full list for
+   * a functional problem — offering one that fails the moment you press Run is
+   * worse than not offering it.
+   */
+  runnable_languages: string[]
+  /**
+   * How the solution reads stdin, in prose. Solutions here are whole programs
+   * over stdin, not function bodies, so the statement alone never says which
+   * line the target is on. Empty when nobody has pinned the format down —
+   * render nothing rather than a guess.
+   */
+  io_format: string
   has_embedding: boolean
   test_case_count: number
 }
@@ -189,11 +220,43 @@ export interface ContributeResponse {
   message: string
 }
 
+// GET /languages
+export interface Language {
+  id: string
+  label: string
+  /** Monaco's own language id, for syntax highlighting. */
+  monaco: string
+  /** A whole program that reads stdin and prints an answer. */
+  starter: string
+}
+
+// GET /progress
+export interface SessionProgress {
+  solved: string[]
+  attempted: string[]
+  runs: number
+  solved_count: number
+}
+
+// GET /progress/{id}
+export interface ProblemProgress {
+  runs: number
+  submissions: number
+  solved: boolean
+  best_passed: number
+  total: number
+}
+
 // POST /verify
 export interface VerifyRequest {
   problem_id: string
   code: string
   language: string
+  /**
+   * 'run' is a trial; 'submit' is the claim that the solution is finished.
+   * Only an accepted submit marks the problem complete.
+   */
+  kind?: 'run' | 'submit'
 }
 export interface TestResult {
   index: number
@@ -209,4 +272,13 @@ export interface VerifyResponse {
   runtime?: string | null
   memory?: string | null
   results: TestResult[]
+
+  submission_id?: string | null
+  kind: 'run' | 'submit'
+  all_passed: boolean
+
+  /** This session's standing on this problem, after the call. */
+  solved: boolean
+  runs: number
+  submissions: number
 }

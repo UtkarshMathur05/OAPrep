@@ -61,10 +61,13 @@ export const mockReconstructResponse: ReconstructResponse = {
       'Given an m x n grid filled with non-negative numbers, find a path from the ' +
       'top-left corner to the bottom-right corner which minimizes the sum of all ' +
       'numbers along its path.\n\nYou can only move either down or right at any ' +
-      'point in time.\n\nInput Format:\nThe first line contains two space-separated ' +
-      'integers m and n, the number of rows and columns.\nThe next m lines each ' +
-      'contain n space-separated integers, the grid values.\n\nOutput Format:\n' +
-      'Print a single integer, the minimum path sum.',
+      'point in time.',
+    // The stdin contract lives here, not spelled out again in the description:
+    // one statement of the format is what keeps cases and solutions agreeing.
+    io_format:
+      'Line 1: two integers m and n, the number of rows and columns.\n' +
+      'Next m lines: n integers each, the grid rows.\n' +
+      'Output: a single integer, the minimum path sum.',
     constraints: ['1 <= m, n <= 200', '0 <= grid[i][j] <= 200'],
     // stdin/stdout, not function-call shorthand: Judge0 runs a script (CLAUDE.md §9).
     examples: [
@@ -94,6 +97,14 @@ export const mockVerifyResponse: VerifyResponse = {
   runtime: '0.21s',
   memory: '18MB',
   results: [],
+  kind: 'run',
+  all_passed: true,
+  // Not solved: a passing run is a trial, and only an accepted submit
+  // completes a problem. The mock has to model that or the UI built against
+  // it will get the rule wrong.
+  solved: false,
+  runs: 1,
+  submissions: 0,
 }
 
 // Reads stdin and prints stdout, matching how Judge0 executes submissions.
@@ -181,6 +192,19 @@ export const mockProblemList: ProblemListResponse = {
 
 export const mockProblemDetail: ProblemDetail = {
   ...mockProblemList.problems[0],
+  // Functional, like most corpus problems: you write the method the statement
+  // describes. io_format is empty because there is no stdin to describe.
+  exec_mode: 'functional',
+  signature: {
+    name: 'minPathSum',
+    params: [{ name: 'grid', type: 'integer[][]' }],
+    return: { type: 'integer' },
+  },
+  code_snippets: {
+    python: 'class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        ',
+  },
+  runnable_languages: ['python'],
+  io_format: '',
   description:
     'Given a m x n grid filled with non-negative numbers, find a path from top ' +
     'left to bottom right which minimizes the sum of all numbers along its path. ' +

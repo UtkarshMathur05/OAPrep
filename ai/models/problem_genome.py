@@ -101,6 +101,12 @@ class ReconstructedProblem(BaseModel):
     notes: List[str] = Field(default_factory=list)
     # Seeded into the Monaco buffer on the Practice screen.
     starter_code: Optional[str] = None
+    # How the solution reads stdin, in prose. Upstream statements are written
+    # for a function signature ("given nums and target") and so never say which
+    # line the target is on; here that is the difference between a correct
+    # solution and a parse error, so it has to be stated, not inferred from the
+    # examples.
+    io_format: str = ""
 
 
 class TestCase(BaseModel):

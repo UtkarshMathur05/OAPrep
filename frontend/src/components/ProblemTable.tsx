@@ -12,9 +12,15 @@ import { Companies, Confidence, Difficulty, TopicsInline } from './Tags'
 export default function ProblemTable({
   problems,
   loading,
+  solved,
+  attempted,
 }: {
   problems: ProblemSummary[]
   loading?: boolean
+  /** Slugs this session has completed, for the status column. */
+  solved?: Set<string>
+  /** Slugs it has run but not completed. */
+  attempted?: Set<string>
 }) {
   if (loading) {
     return (
@@ -47,7 +53,8 @@ export default function ProblemTable({
         {/* Fixed widths: without them the columns resize as you page through,
             and a table whose grid moves is harder to read than a list. */}
         <colgroup>
-          <col className="w-[31%]" />
+          <col className="w-[3%]" />
+          <col className="w-[28%]" />
           <col className="w-[10%]" />
           <col className="w-[25%]" />
           <col className="w-[20%]" />
@@ -56,6 +63,7 @@ export default function ProblemTable({
         </colgroup>
         <thead>
           <tr className="border-b border-line">
+            <th className="th"><span className="sr-only">Status</span></th>
             <th className="th">problem</th>
             <th className="th">difficulty</th>
             <th className="th">topics</th>
@@ -66,7 +74,10 @@ export default function ProblemTable({
         </thead>
         <tbody className="divide-y divide-line">
           {problems.map((p) => (
-            <tr key={p.id} className="group hover:bg-ground">
+            <tr key={p.id} className="group hover:bg-raised">
+              <td className="td text-center">
+                <Status solved={solved?.has(p.slug)} attempted={attempted?.has(p.slug)} />
+              </td>
               <td className="td">
                 <Link
                   to={`/problems/${p.slug}`}
@@ -98,4 +109,20 @@ export default function ProblemTable({
       </table>
     </div>
   )
+}
+
+/**
+ * Solved / attempted, as a single glyph.
+ *
+ * A whole word per row would out-shout the titles, and this column is scanned
+ * rather than read — you are looking for the gaps.
+ */
+function Status({ solved, attempted }: { solved?: boolean; attempted?: boolean }) {
+  if (solved) {
+    return <span className="text-easy" title="Solved" aria-label="Solved">✓</span>
+  }
+  if (attempted) {
+    return <span className="text-medium" title="Attempted" aria-label="Attempted">·</span>
+  }
+  return <span className="sr-only">Not attempted</span>
 }
