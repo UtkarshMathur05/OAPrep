@@ -69,24 +69,21 @@ export default function Layout() {
             community-maintained · every contributed question is labelled and scored
           </p>
           <p className="font-mono text-micro text-ink3">
-            solutions run in a sandbox · 11 languages
+            solutions run in a sandbox · up to 11 languages
           </p>
         </div>
-        {/* Attribution, not a feature callout. Curated questions are not ours:
-            the statements, function signatures and worked examples come from
-            LeetCode, and saying so is the difference between reuse and passing
-            it off. Contributed questions are written by people here, which is
-            why the two are named separately. */}
-        <div className="shell border-t border-line py-5">
-          <p className="max-w-reading font-mono text-micro leading-relaxed text-ink3">
-            Curated question statements, function signatures and worked examples
-            are sourced from{' '}
+        {/* Attribution, not a feature callout — curated statements, signatures
+            and worked examples are not ours, and saying so is the difference
+            between reuse and passing it off. One line: a legal note earns a
+            footer's last line, not a paragraph competing with the site. The
+            row above already says contributed questions are labelled. */}
+        <div className="shell border-t border-line py-4">
+          <p className="font-mono text-micro leading-relaxed text-ink3">
+            Curated questions sourced from{' '}
             <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer"
                className="link">LeetCode</a>
-            , and remain the property of their respective owners. Memoize is not
-            affiliated with or endorsed by LeetCode. Community-contributed
-            questions are written by people using this site and are labelled as
-            such throughout.
+            {' '}and remain their owners' property · Memoize is not affiliated with
+            or endorsed by LeetCode
           </p>
         </div>
       </footer>

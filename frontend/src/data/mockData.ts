@@ -192,6 +192,10 @@ export const mockProblemList: ProblemListResponse = {
 
 export const mockProblemDetail: ProblemDetail = {
   ...mockProblemList.problems[0],
+  // An ordinary algorithm problem, so it is solvable here. SQL and class-design
+  // problems are the exception and send people upstream instead.
+  solvable: true,
+  unsolvable_reason: null,
   // Functional, like most corpus problems: you write the method the statement
   // describes. io_format is empty because there is no stdin to describe.
   exec_mode: 'functional',

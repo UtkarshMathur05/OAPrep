@@ -72,12 +72,14 @@ export default function Browse() {
     }
   }, [company, topic, difficulty, origin, search, sort, offset])
 
-  /** Every filter change resets paging — page 4 of a different filter is a lie. */
+  /** Every filter change resets paging — page 4 of a different filter is a lie.
+   *  Paging itself is the exception: clearing `offset` here made Prev/Next set
+   *  the offset and then delete it, so both buttons silently returned to page 1. */
   const setFilter = (key: string, value: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value)
     else next.delete(key)
-    next.delete('offset')
+    if (key !== 'offset') next.delete('offset')
     setParams(next)
   }
 

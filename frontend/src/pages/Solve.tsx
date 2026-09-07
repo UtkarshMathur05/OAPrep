@@ -64,9 +64,17 @@ export default function Solve() {
 
   useEffect(() => { getLanguages().then(setAllLanguages).catch(() => setAllLanguages([])) }, [])
 
+  // Always fetch, even when the recall flow handed us a reconstructed problem.
+  // A handed `Problem` carries the statement but none of `exec_mode`,
+  // `code_snippets`, `runnable_languages` or `solvable` — so short-circuiting
+  // the fetch gave every recalled problem the generic stdin starter, all eleven
+  // languages, and no way to know it was a SQL question. The handed copy is the
+  // placeholder that renders while this lands, nothing more.
   useEffect(() => {
-    if (handed) return
-    getProblem(slug).then(setProblem).catch(() => setError('We could not load that problem.'))
+    if (!slug) return
+    getProblem(slug)
+      .then(setProblem)
+      .catch(() => { if (!handed) setError('We could not load that problem.') })
   }, [slug, handed])
 
   // Progress survives a reload: the counter is the database's, not the tab's.
@@ -95,7 +103,9 @@ export default function Solve() {
     // the race, and seeding from it first would lock in the generic stdin
     // template for a functional problem — whose own starter then never applies,
     // because a seeded buffer is never re-seeded.
-    if (!language || !problem || buffers[language.id] !== undefined) return
+    // `detail`, not `problem`: a handed reconstruction is truthy immediately and
+    // would seed the stdin template before the real starter arrives.
+    if (!language || !detail || buffers[language.id] !== undefined) return
     const seed = detail?.code_snippets?.[language.id]
       ?? (language.id === 'python' && handed?.starter_code
         ? handed.starter_code
@@ -157,6 +167,34 @@ export default function Solve() {
     setBuffers((b) => ({ ...b, [langId]: next }))
     // The proof was about the code that ran, not the code on screen.
     if (proved) setProved(false)
+  }
+
+  // Reachable by typing the URL, and by any stale link. An editor that cannot
+  // return a verdict is worse than no editor, so say why and send them on.
+  if (detail && !detail.solvable) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-5 bg-ground px-6 text-center text-ink">
+        <h1 className="text-h3">{detail.title}</h1>
+        <p className="max-w-reading text-small leading-relaxed text-ink2">
+          {detail.unsolvable_reason}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {detail.source_url && (
+            <a
+              href={detail.source_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="btn-accent"
+            >
+              solve on LeetCode
+            </a>
+          )}
+          <Link to={`/problems/${detail.slug}`} className="btn-ghost">
+            back to the problem
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

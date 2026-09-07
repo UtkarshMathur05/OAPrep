@@ -259,3 +259,27 @@ def test_a_problem_with_no_format_still_generates_from_examples():
         title="x", description="y",
         examples=[WorkedExample(input="1 2 3", output="6")]))
     assert "1 2 3" in hint
+
+
+# ------------------------------------------------- problems we cannot run here
+
+def test_sql_and_design_problems_are_marked_unsolvable():
+    """Identified by LeetCode's own topic tags, not by our reading of the text."""
+    from app.api.problems import _solvability
+
+    sql = _solvability({"topics": ["Database"], "test_case_count": 0})
+    assert sql["solvable"] is False and "SQL" in sql["unsolvable_reason"]
+
+    design = _solvability({"topics": ["Design", "Stack"], "test_case_count": 0})
+    assert design["solvable"] is False
+
+    ordinary = _solvability({"topics": ["Array"], "test_case_count": 0})
+    assert ordinary["solvable"] is True, "an untested algorithm problem still generates cases"
+
+
+def test_a_stored_case_settles_it():
+    """A problem with cases is runnable whatever it is tagged: the tags are a
+    signal about problems we have nothing for, not a veto over real data."""
+    from app.api.problems import _solvability
+
+    assert _solvability({"topics": ["Design"], "test_case_count": 3})["solvable"] is True

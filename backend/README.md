@@ -350,6 +350,21 @@ has no way to express their argument types: `construct-quad-tree`,
 `employee-importance`, `find-duplicate-subtrees` and
 `flatten-a-multilevel-doubly-linked-list`. They are solvable, just not in C.
 
+**Some problems are not solvable here at all, and say so.** SQL questions and
+class-design ones are identified by LeetCode's own `Database` and `Design` topic
+tags, so it is not our inference. `GET /problems/{id}` returns `solvable: false`
+with a one-sentence reason and the UI links out. `POST /verify` refuses them
+before the generate-on-first-run path: generating stdin cases for a problem that
+has no stdin format would invent one and then judge somebody against it.
+
+The gate has to sit on `/reconstruct` too, not just `/verify`. A reconstruction
+stores its worked examples as test cases — normally a free win, since the problem
+becomes runnable for everyone afterwards. For a SQL or class-design problem those
+examples are invented, and storing them made the problem look runnable to every
+later check: `solvable` reads `test_case_count`, so one recall was enough to
+reopen the editor on a problem that can never be graded. `ai_service.reconstruct`
+judges the corpus row before saving anything.
+
 **A functional problem must offer at least one language we can run.** LeetCode's
 JavaScript-track problems ship starters only for JS and TS, which have no
 harness, so converting one produced a problem the editor offered zero languages

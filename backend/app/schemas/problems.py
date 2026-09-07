@@ -56,6 +56,11 @@ class ProblemDetail(ProblemSummary):
     runnable_languages: List[str] = Field(default_factory=list)
     has_embedding: bool = False
     test_case_count: int = 0
+    # False when the problem cannot be attempted here at all — a SQL question or
+    # a class-design one. The UI sends those upstream rather than opening an
+    # editor that can never return a verdict.
+    solvable: bool = True
+    unsolvable_reason: Optional[str] = None
 
 
 class ProblemListResponse(BaseModel):

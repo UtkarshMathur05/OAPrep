@@ -118,6 +118,16 @@ def verify(req: VerifyRequest, request: Request) -> VerifyResponse:
     row = database_service.get_problem(req.problem_id) or {}
 
     cases = database_service.get_test_cases(req.problem_id, limit=judge_service.MAX_TEST_CASES)
+
+    # A SQL or class-design problem is not a program that reads stdin, so
+    # generating cases for one would invent an input format it does not have and
+    # then judge somebody against it. Say so instead.
+    from app.api.problems import _solvability
+    verdict = _solvability(row | {"test_case_count": len(cases)})
+    if not verdict["solvable"]:
+        return VerifyResponse(status=verdict["unsolvable_reason"], passed=0, total=0,
+                              kind=req.kind, **_standing(session, req.problem_id))
+
     if not cases and row.get("exec_mode") != "functional":
         # Only stdin problems generate their own cases. A functional problem's
         # cases are JSON arguments matching a typed signature; a generated stdin

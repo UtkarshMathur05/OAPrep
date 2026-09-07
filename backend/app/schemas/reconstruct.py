@@ -56,6 +56,15 @@ class Problem(BaseModel):
     # Seeds the Monaco buffer on the Practice screen. Python only (see §9).
     starter_code: Optional[str] = None
 
+    # False when the problem cannot be attempted here at all — a SQL question or
+    # a class-design one. Carried on the reconstruction because otherwise the
+    # recall flow offers an editor for a problem the judge can never grade, and
+    # the person only finds out after writing a solution.
+    solvable: bool = True
+    unsolvable_reason: Optional[str] = None
+    # Where to send them instead, when it is not solvable here.
+    source_url: Optional[str] = None
+
 
 class ReconstructResponse(BaseModel):
     problem: Problem

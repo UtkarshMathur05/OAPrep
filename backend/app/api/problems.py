@@ -47,7 +47,36 @@ def get_problem(problem_id: str) -> ProblemDetail:
     row = database_service.get_problem(problem_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"No problem matching '{problem_id}'")
-    return ProblemDetail(**row, runnable_languages=_runnable(row))
+    return ProblemDetail(**row, runnable_languages=_runnable(row),
+                         **_solvability(row))
+
+
+# LeetCode's own tags, so this is not our inference about what a problem is.
+# A `Database` problem is answered with a query and a `Design` problem by
+# implementing a class the judge then calls a sequence of methods on. Neither is
+# a program that reads stdin, and neither has a harness.
+_CANNOT_RUN = {
+    "Database": "The answer to this one is a SQL query, and Memoize runs programs.",
+    "Design": "This is a class-design problem: the judge builds your class and "
+              "calls a sequence of methods on it, which Memoize cannot express yet.",
+}
+
+
+def _solvability(row: dict) -> dict:
+    """Whether this problem can be attempted here, and if not, why.
+
+    Only meaningful for a problem with no stored cases. A stdin problem with no
+    cases generates them on the first run, which is fine for an ordinary
+    algorithm question and meaningless for these two kinds -- there, generating
+    would invent an input format for a problem that has none, and then judge
+    somebody against it.
+    """
+    if row.get("test_case_count"):
+        return {"solvable": True, "unsolvable_reason": None}
+    for tag, reason in _CANNOT_RUN.items():
+        if tag in (row.get("topics") or []):
+            return {"solvable": False, "unsolvable_reason": reason}
+    return {"solvable": True, "unsolvable_reason": None}
 
 
 def _runnable(row: dict) -> list[str]:

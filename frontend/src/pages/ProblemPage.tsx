@@ -72,15 +72,49 @@ export default function ProblemPage() {
           {problem.description}
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-          <Link to={`/solve/${problem.slug}`} className="btn-accent">
-            solve this problem
-          </Link>
-          <span className="font-mono text-micro text-ink3">
-            {problem.test_case_count > 0
-              ? `${problem.test_case_count} stored test ${problem.test_case_count === 1 ? 'case' : 'cases'}`
-              : 'Test cases are generated on your first run'}
-          </span>
+        <div className="mt-8 border-t border-line pt-6">
+          {problem.solvable ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Link to={`/solve/${problem.slug}`} className="btn-accent">
+                solve this problem
+              </Link>
+              {problem.source_url && (
+                <a
+                  href={problem.source_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="btn-ghost"
+                >
+                  open on LeetCode
+                </a>
+              )}
+              <span className="font-mono text-micro text-ink3">
+                {problem.test_case_count > 0
+                  ? `${problem.test_case_count} stored test ${problem.test_case_count === 1 ? 'case' : 'cases'}`
+                  : 'Test cases are generated on your first run'}
+              </span>
+            </div>
+          ) : (
+            /* No editor for a problem the judge can never return a verdict on.
+               Opening one and failing at Run wastes the attempt and explains
+               nothing. */
+            <div className="max-w-reading">
+              <p className="text-small leading-relaxed text-ink2">
+                {problem.unsolvable_reason} You can still read it here — solve it
+                where it can be checked.
+              </p>
+              {problem.source_url && (
+                <a
+                  href={problem.source_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="btn-accent mt-4 inline-block"
+                >
+                  solve on LeetCode
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </article>
 

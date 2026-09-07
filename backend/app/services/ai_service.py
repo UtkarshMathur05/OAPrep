@@ -183,16 +183,29 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
 
     problem = reconstruct_problem(genome, candidate)
 
+    from app.api.problems import _solvability
+
+    # Judged on the corpus row, not on the reconstruction: what kind of problem
+    # this is was settled upstream and cannot change by being described.
+    verdict = _solvability({"topics": candidate.topics, "test_case_count": 0})
+
     # The reconstruction's examples are already stdin/stdout pairs, so they are
     # test cases. Storing them costs nothing and means Run tests works for any
     # problem the user actually reached, without a second model call.
-    try:
-        from ai.verification.test_generator import cases_from_examples
+    #
+    # Except here. A SQL or class-design problem has no stdin format, so its
+    # "examples" are an invention, and storing them makes the problem look
+    # runnable to every later check — which is exactly how one of these reached
+    # the editor with a reconstructed input format nobody could satisfy.
+    if verdict["solvable"]:
+        try:
+            from ai.verification.test_generator import cases_from_examples
 
-        database_service.save_test_cases(
-            candidate.id, cases_from_examples(problem), io_format=problem.io_format)
-    except Exception as exc:  # noqa: BLE001 - never fail a reconstruction over this
-        log.warning("could not store examples as test cases: %s", exc)
+            database_service.save_test_cases(
+                candidate.id, cases_from_examples(problem),
+                io_format=problem.io_format)
+        except Exception as exc:  # noqa: BLE001 - never fail a reconstruction over this
+            log.warning("could not store examples as test cases: %s", exc)
 
     return ReconstructResponse(problem=Problem(
         id=candidate.id,
@@ -209,4 +222,7 @@ def reconstruct(req: ReconstructRequest) -> ReconstructResponse:
         provenance=problem.provenance.model_dump(),
         notes=problem.notes,
         starter_code=problem.starter_code or _STARTER_PY,
+        solvable=verdict["solvable"],
+        unsolvable_reason=verdict["unsolvable_reason"],
+        source_url=candidate.source_url,
     ))

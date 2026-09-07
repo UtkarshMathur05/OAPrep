@@ -87,6 +87,14 @@ export interface Problem {
   notes: string[]
   /** Seeds the Monaco buffer on the Practice screen. Python only. */
   starter_code?: string | null
+  /**
+   * False when this problem cannot be attempted here at all — a SQL question or
+   * a class-design one. Carried on the reconstruction so the recall flow can
+   * link out instead of offering an editor that can never return a verdict.
+   */
+  solvable?: boolean
+  unsolvable_reason?: string | null
+  source_url?: string | null
 }
 export interface ReconstructResponse {
   problem: Problem
@@ -143,6 +151,15 @@ export interface ProblemDetail extends ProblemSummary {
   io_format: string
   has_embedding: boolean
   test_case_count: number
+  /**
+   * False when the problem cannot be attempted here at all — a SQL question, or
+   * a class-design one where the judge calls a sequence of methods. Neither is a
+   * program that reads stdin, so we send people upstream rather than open an
+   * editor that can never return a verdict.
+   */
+  solvable: boolean
+  /** Why, in one sentence, when `solvable` is false. */
+  unsolvable_reason: string | null
 }
 
 export interface ProblemListResponse {

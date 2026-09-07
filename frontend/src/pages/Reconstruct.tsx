@@ -259,21 +259,42 @@ export default function Reconstruct() {
                       >
                         try a different match
                       </button>
-                      <div className="flex items-center gap-4">
-                        <span className="font-mono text-micro text-ink3">
-                          python, run against real test cases
-                        </span>
-                        <button
-                          onClick={() =>
-                            navigate(`/solve/${state.problem!.id ?? ''}`, {
-                              state: { problem: state.problem },
-                            })
-                          }
-                          className="btn-accent"
-                        >
-                          open the editor
-                        </button>
-                      </div>
+                      {state.problem.solvable === false ? (
+                        /* Rebuilding it worked; running it never can. Offering
+                           the editor here and failing at Run would waste the
+                           attempt and explain nothing. */
+                        <div className="flex flex-wrap items-center gap-4">
+                          <span className="max-w-reading font-mono text-micro leading-relaxed text-ink3">
+                            {state.problem.unsolvable_reason}
+                          </span>
+                          {state.problem.source_url && (
+                            <a
+                              href={state.problem.source_url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="btn-accent"
+                            >
+                              solve on LeetCode
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4">
+                          <span className="font-mono text-micro text-ink3">
+                            run against real test cases
+                          </span>
+                          <button
+                            onClick={() =>
+                              navigate(`/solve/${state.problem!.id ?? ''}`, {
+                                state: { problem: state.problem },
+                              })
+                            }
+                            className="btn-accent"
+                          >
+                            open the editor
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

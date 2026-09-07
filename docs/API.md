@@ -111,10 +111,25 @@ Rebuild the full problem statement from a memory and the chosen candidate.
     "notes": [
       "You recalled obstacles; this problem has none — you may be thinking of Unique Paths II."
     ],
-    "starter_code": "import sys\n\ndef main():\n    ..."
+    "starter_code": "import sys\n\ndef main():\n    ...",
+    "solvable": true,
+    "unsolvable_reason": null,
+    "source_url": "https://leetcode.com/problems/minimum-path-sum"
   }
 }
 ```
+
+`solvable` mirrors the field on `GET /problems/{id}` and is judged on the corpus
+row, not on the reconstruction — what kind of problem it is was settled upstream
+and cannot change by being described. When it is `false` the recall flow links to
+`source_url` instead of offering the editor.
+
+It also gates the side effect. A reconstruction normally stores its examples as
+test cases, which costs nothing and makes the problem runnable for everyone
+afterwards. For a SQL or class-design problem those examples are an invention —
+there is no stdin format to have examples of — and storing them made the problem
+look runnable to every later check. That is how one reached the editor with a
+reconstructed input format nobody could satisfy. Nothing is stored for these now.
 
 ### provenance
 
@@ -312,7 +327,7 @@ Accepts **either a UUID or a slug**, so `/problems/two-sum` works.
 
 Returns one `ProblemSummary` plus `description`, `exec_mode`, `signature`,
 `code_snippets`, `runnable_languages`, `io_format`, `has_embedding` (whether it
-is searchable yet) and `test_case_count`.
+is searchable yet), `test_case_count`, `solvable` and `unsolvable_reason`.
 
 `exec_mode` decides how the problem is solved:
 
@@ -326,6 +341,22 @@ is searchable yet) and `test_case_count`.
 `runnable_languages` is what the editor must offer. A functional problem needs
 both a starter and a harness for a language, so the list is usually shorter than
 the eleven in `GET /languages`; a stdin problem lists all of them.
+
+`solvable` is `false` for a problem that cannot be attempted here at all, with
+`unsolvable_reason` giving the one-sentence why. Two kinds qualify, identified by
+LeetCode's own `Database` and `Design` topic tags rather than by our inference:
+a SQL question, whose answer is a query, and a class-design question, where the
+judge constructs your class and calls a sequence of methods on it. Neither is a
+program that reads stdin.
+
+The distinction matters because a stdin problem with no stored cases *generates*
+them on the first run. That is right for an ordinary algorithm question and wrong
+for these — it would invent an input format the problem does not have and then
+judge somebody against it. `POST /verify` refuses instead, returning the same
+sentence as its `status` with `total: 0`, and the UI links out rather than opening
+an editor that can never return a verdict.
+
+Both fields are additive; existing clients are unaffected.
 
 `io_format` is the stdin contract in prose, e.g.
 
