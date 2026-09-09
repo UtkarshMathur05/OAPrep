@@ -11,7 +11,7 @@ services:
     name: memoize
     runtime: docker
     plan: free
-    region: oregon
+    region: singapore
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
@@ -50,9 +50,14 @@ services:
       # Until a domain exists, links are printed to the service log rather than
       # delivered. That is testable and visible; a mail provider misconfigured
       # into silence is neither. See docs/DEPLOY.md for the switch.
+      # Switch to "brevo" once you have a verified sender. Not "smtp": free
+      # instances block outbound 25/465/587, so an SMTP send times out here
+      # rather than failing, and config.py warns at boot if you try.
       - key: EMAIL_PROVIDER
         value: console
       - key: EMAIL_FROM
+        sync: false
+      - key: BREVO_API_KEY
         sync: false
       - key: RESEND_API_KEY
         sync: false

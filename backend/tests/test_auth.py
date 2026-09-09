@@ -209,3 +209,44 @@ def test_state_must_be_ours(client):
     r = client.get("/api/auth/github/callback?code=x&state=forged", follow_redirects=False)
     assert r.status_code == 302
     assert "/signin?error=" in r.headers["location"]
+
+
+# ------------------------------------------------------------ email backends
+
+def test_brevo_sends_over_https_with_a_split_sender(monkeypatch):
+    """Render's free tier blocks outbound 25/465/587, so the Brevo account has
+    to be reached over HTTP rather than SMTP. Brevo also wants the sender split
+    into name and address rather than one RFC 5322 string."""
+    from app import email as mailer
+
+    captured = {}
+
+    class _Response:
+        status_code = 201
+        text = ""
+
+    def fake_post(url, **kwargs):
+        captured["url"] = url
+        captured["headers"] = kwargs["headers"]
+        captured["json"] = kwargs["json"]
+        return _Response()
+
+    monkeypatch.setattr(mailer, "EMAIL_PROVIDER", "brevo")
+    monkeypatch.setattr(mailer, "BREVO_API_KEY", "test-key")
+    monkeypatch.setattr(mailer, "EMAIL_FROM", "Memoize <hello@example.com>")
+    monkeypatch.setattr(mailer.httpx, "post", fake_post)
+
+    assert mailer.send("someone@example.com", "Confirm", "link") is True
+    assert captured["url"].startswith("https://")
+    assert captured["headers"]["api-key"] == "test-key"
+    assert captured["json"]["sender"] == {"email": "hello@example.com", "name": "Memoize"}
+    assert captured["json"]["to"] == [{"email": "someone@example.com"}]
+
+
+def test_a_missing_brevo_key_fails_soft(monkeypatch):
+    """Sending never raises: a signup must not 500 because mail is misconfigured."""
+    from app import email as mailer
+
+    monkeypatch.setattr(mailer, "EMAIL_PROVIDER", "brevo")
+    monkeypatch.setattr(mailer, "BREVO_API_KEY", "")
+    assert mailer.send("someone@example.com", "Confirm", "link") is False

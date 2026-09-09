@@ -5,7 +5,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://recollect:recollect@localhost:5432/recollect")
+# `neon env pull` writes both DATABASE_URL (pooled) and DATABASE_URL_UNPOOLED
+# (direct), and owns those lines — it rewrites them on every pull, so editing
+# one by hand does not survive. Prefer the direct one where it exists: this app
+# opens a connection per request and closes it (no pool to amortise), and
+# psycopg 3 prepares statements after a few executions, which transaction-mode
+# poolers are historically awkward about. Everywhere else, DATABASE_URL is it.
+DATABASE_URL = (
+    os.getenv("DATABASE_URL_UNPOOLED")
+    or os.getenv("DATABASE_URL")
+    or "postgresql://recollect:recollect@localhost:5432/recollect"
+)
 def _real(value: str) -> str:
     """Treat .env.example placeholders as unset, so readiness checks are honest."""
     v = (value or "").strip()
@@ -69,9 +79,14 @@ GOOGLE_CLIENT_SECRET = _real(os.getenv("GOOGLE_CLIENT_SECRET", ""))
 # console | resend | smtp. "console" prints the link to the server log, so the
 # whole verify/reset flow is testable with no provider account and no network —
 # the same degradation idea as USE_MOCK_AI.
+# console | resend | brevo | smtp
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "console").lower()
 EMAIL_FROM = os.getenv("EMAIL_FROM", "Memoize <onboarding@resend.dev>")
 RESEND_API_KEY = _real(os.getenv("RESEND_API_KEY", ""))
+# Brevo over HTTPS rather than SMTP. Not a preference: Render's free tier blocks
+# outbound 25/465/587, so an SMTP provider cannot be reached from a free web
+# service at all. The HTTP API is the same account and the same 300/day.
+BREVO_API_KEY = _real(os.getenv("BREVO_API_KEY", ""))
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
@@ -125,6 +140,12 @@ def auth_warnings() -> list[str]:
         out.append("No OAuth provider configured — only email and password will work.")
     if EMAIL_PROVIDER == "console":
         out.append("EMAIL_PROVIDER=console — verification and reset links are printed to the log, not sent.")
+    if EMAIL_PROVIDER == "smtp" and os.getenv("RENDER"):
+        out.append(
+            "EMAIL_PROVIDER=smtp on Render — free instances block outbound ports 25/465/587, "
+            "so mail will time out rather than send. Use EMAIL_PROVIDER=brevo (same account, "
+            "over HTTPS) or resend."
+        )
     if _registrable(PUBLIC_APP_URL) != _registrable(PUBLIC_API_URL) and COOKIE_SAMESITE != "none":
         out.append(
             f"PUBLIC_APP_URL and PUBLIC_API_URL are different sites and COOKIE_SAMESITE={COOKIE_SAMESITE} "

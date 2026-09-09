@@ -42,3 +42,6 @@ ai/.cache/
 
 # Local Claude Code project context. Kept on disk, out of the repo.
 CLAUDE.md
+.neon
+.claude
+skills-lock.json

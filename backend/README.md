@@ -228,6 +228,11 @@ lie about the one case it exists for.
   log, so the whole verify/reset flow works with no provider account and no
   domain — the same idea as `USE_MOCK_AI`. It is loud rather than silent: mail
   that vanishes without trace is how you ship a reset flow that never worked.
+  The other three are `resend`, `brevo` (both HTTPS) and `smtp`. `brevo` exists
+  as its own backend rather than being folded into `smtp` for one deployment
+  reason: **Render's free instances block outbound ports 25/465/587**, so an
+  SMTP provider is unreachable there and fails by timing out. Same account, same
+  300/day, over HTTPS instead. `auth_warnings()` flags `smtp` on Render at boot.
 
 ### The guest limit
 

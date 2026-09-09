@@ -1,10 +1,17 @@
 """Sending a link to an address.
 
-One seam, three backends, chosen by `EMAIL_PROVIDER`:
+One seam, four backends, chosen by `EMAIL_PROVIDER`:
 
     console   print it to the server log     (default — no account, no network)
-    resend    HTTPS POST to Resend           (free tier: 3,000/month)
-    smtp      any SMTP server                (Brevo, Gmail app password, …)
+    resend    HTTPS POST to Resend           (free tier: 3,000/month, needs a domain)
+    brevo     HTTPS POST to Brevo            (free tier: 300/day, single sender is enough)
+    smtp      any SMTP server                (local use, or a host that permits it)
+
+`brevo` and `smtp` reach the same Brevo account by different roads, and the road
+matters: **Render's free instances block outbound traffic to ports 25, 465 and
+587**, so an SMTP provider is simply unreachable from a free web service — the
+send times out rather than failing loudly. The HTTP API is not blocked. `smtp`
+stays because it is right for a laptop and for hosts that allow it.
 
 `console` exists for the same reason `USE_MOCK_AI` does: the whole
 verify-your-address and reset-your-password flow has to be testable on a laptop
@@ -26,6 +33,7 @@ from email.message import EmailMessage
 import httpx
 
 from app.config import (
+    BREVO_API_KEY,
     EMAIL_FROM,
     EMAIL_PROVIDER,
     RESEND_API_KEY,
@@ -45,6 +53,8 @@ def send(to: str, subject: str, body: str) -> bool:
     try:
         if EMAIL_PROVIDER == "resend":
             return _resend(to, subject, body)
+        if EMAIL_PROVIDER == "brevo":
+            return _brevo(to, subject, body)
         if EMAIL_PROVIDER == "smtp":
             return _smtp(to, subject, body)
         return _console(to, subject, body)
@@ -77,6 +87,40 @@ def _resend(to: str, subject: str, body: str) -> bool:
     )
     if r.status_code >= 400:
         log.warning("resend rejected the mail: %s %s", r.status_code, r.text[:200])
+        return False
+    return True
+
+
+def _brevo(to: str, subject: str, body: str) -> bool:
+    """Brevo's transactional API. Same account as SMTP, over HTTPS.
+
+    Brevo wants the sender split into name and address rather than one RFC 5322
+    string, so EMAIL_FROM is parsed instead of passed through.
+    """
+    if not BREVO_API_KEY:
+        log.warning("EMAIL_PROVIDER=brevo but BREVO_API_KEY is unset")
+        return False
+    from email.utils import parseaddr
+
+    name, address = parseaddr(EMAIL_FROM)
+    if not address:
+        log.warning("EMAIL_FROM has no address to send from: %r", EMAIL_FROM)
+        return False
+    sender = {"email": address}
+    if name:
+        sender["name"] = name
+
+    r = httpx.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": BREVO_API_KEY, "accept": "application/json"},
+        json={"sender": sender, "to": [{"email": to}],
+              "subject": subject, "textContent": body},
+        timeout=TIMEOUT,
+    )
+    if r.status_code >= 400:
+        # Brevo's own words are more useful than ours: an unverified sender and
+        # a bad key are different problems with the same symptom.
+        log.warning("brevo rejected the mail: %s %s", r.status_code, r.text[:200])
         return False
     return True
 
