@@ -1,0 +1,25 @@
+# The build context is the whole repo, and most of it has no business in an
+# image. venv/ and node_modules/ alone are ~470MB.
+venv/
+.venv/
+**/node_modules/
+**/dist/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# The corpus CSVs are the *input* to ai/corpus/; the embedded result is already
+# in database/init/03_corpus.sql and lives in Postgres, not the image.
+data/
+database/
+ai/.cache/
+ai/corpus/out/
+
+.git/
+.github/
+.env
+.env.local
+*.dump
+docs/
+CLAUDE.md

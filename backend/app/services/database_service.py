@@ -301,6 +301,7 @@ def save_submission(
     *,
     kind: str = "run",
     session_id=None,
+    user_id=None,
 ) -> Optional[str]:
     """Record a run or a submit. `result` is a schemas.verify.VerifyResponse.
 
@@ -315,19 +316,55 @@ def save_submission(
         """
         INSERT INTO submissions
             (problem_id, code, language, status, runtime, memory,
-             kind, passed, total, session_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             kind, passed, total, session_id, user_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id::text AS id
         """,
         (canonical, code, language, result.status, result.runtime, result.memory,
-         kind, result.passed, result.total, session_id),
+         kind, result.passed, result.total, session_id, user_id),
     )
     return row["id"]
 
 
 # ------------------------------------------------------------------- progress
 
-def problem_progress(session_id, problem_id: str) -> dict:
+def _owner_clause(principal) -> tuple[str, dict]:
+    """SQL restricting submissions to whoever is asking.
+
+    A signed-in user owns their history across every browser they have used, so
+    the account wins whenever there is one; only a signed-out visitor is scoped
+    to their browser. Returns a falsy clause for a caller we cannot identify at
+    all, which the callers turn into an empty result rather than a full scan.
+    """
+    if principal is None:
+        return "", {}
+    user_id = getattr(principal, "user_id", None)
+    session_id = getattr(principal, "session_id", principal)
+    if user_id is not None:
+        return "s.user_id = %(uid)s", {"uid": user_id}
+    if session_id is not None:
+        return "s.session_id = %(sid)s", {"sid": session_id}
+    return "", {}
+
+
+def guest_problems_used(session_id) -> int:
+    """Distinct problems this signed-out browser has already run.
+
+    Distinct problems, not runs: iterating on one problem should cost nothing,
+    and the limit is about how much of the corpus you can work through before
+    signing in.
+    """
+    if session_id is None:
+        return 0
+    row = query_one(
+        "SELECT count(DISTINCT problem_id) AS n FROM submissions "
+        "WHERE session_id = %s AND user_id IS NULL",
+        (session_id,),
+    )
+    return int(row["n"] or 0) if row else 0
+
+
+def problem_progress(principal, problem_id: str) -> dict:
     """How far this session has got with one problem.
 
     `solved` is an accepted **submit**, not an accepted run: a run that happens
@@ -335,21 +372,22 @@ def problem_progress(session_id, problem_id: str) -> dict:
     away from the user.
     """
     canonical = resolve_problem_id(problem_id)
-    if canonical is None or session_id is None:
+    clause, params = _owner_clause(principal)
+    if canonical is None or not clause:
         return {"runs": 0, "submissions": 0, "solved": False, "best_passed": 0, "total": 0}
 
     row = query_one(
-        """
+        f"""
         SELECT
             count(*) FILTER (WHERE kind = 'run')    AS runs,
             count(*) FILTER (WHERE kind = 'submit') AS submissions,
             bool_or(kind = 'submit' AND total > 0 AND passed = total) AS solved,
             coalesce(max(passed), 0) AS best_passed,
             coalesce(max(total), 0)  AS total
-        FROM submissions
-        WHERE session_id = %s AND problem_id = %s
+        FROM submissions s
+        WHERE {clause} AND s.problem_id = %(pid)s
         """,
-        (session_id, canonical),
+        {**params, "pid": canonical},
     )
     return {
         "runs": row["runs"] or 0,
@@ -360,26 +398,27 @@ def problem_progress(session_id, problem_id: str) -> dict:
     }
 
 
-def session_progress(session_id) -> dict:
+def session_progress(principal) -> dict:
     """Every problem this session has touched, split into solved and attempted.
 
     Slugs rather than ids, because that is what the listing and the URLs use.
     One query for the whole listing: marking 25 rows must not be 25 round trips.
     """
-    if session_id is None:
+    clause, params = _owner_clause(principal)
+    if not clause:
         return {"solved": [], "attempted": [], "runs": 0, "solved_count": 0}
 
     rows = query(
-        """
+        f"""
         SELECT p.slug,
                bool_or(s.kind = 'submit' AND s.total > 0 AND s.passed = s.total) AS solved,
                count(*) FILTER (WHERE s.kind = 'run') AS runs
         FROM submissions s
         JOIN problems p ON p.id = s.problem_id
-        WHERE s.session_id = %s
+        WHERE {clause}
         GROUP BY p.slug
         """,
-        (session_id,),
+        params,
     )
     solved = [r["slug"] for r in rows if r["solved"]]
     attempted = [r["slug"] for r in rows if not r["solved"]]
@@ -492,6 +531,7 @@ def create_community_problem(
     topics: list[str],
     companies: list[str],
     embedding: Optional[list[float]],
+    created_by=None,
 ) -> dict:
     """Insert a user-described problem and return its summary row.
 
@@ -510,14 +550,14 @@ def create_community_problem(
         INSERT INTO problems (
             slug, title, description, platform, difficulty, topics, companies,
             company_count, embedding, description_source,
-            origin, confidence, contribution_count
+            origin, confidence, contribution_count, created_by
         )
         VALUES (
             %(slug)s, %(title)s, %(description)s, 'community', %(difficulty)s,
             %(topics)s, %(companies)s, %(company_count)s, %(embedding)s,
             -- contribution_count starts at 0: record_contribution() is what
             -- counts the author, so seeding it here would count them twice.
-            'community', 'community', %(confidence)s, 0
+            'community', 'community', %(confidence)s, 0, %(created_by)s
         )
         RETURNING id::text AS id, slug
         """,
@@ -531,6 +571,7 @@ def create_community_problem(
             "company_count": len(companies),
             "embedding": embedding,
             "confidence": SEED_CONFIDENCE,
+            "created_by": created_by,
         },
     )
     return row
@@ -543,6 +584,7 @@ def record_contribution(
     transcript: str,
     details: Optional[dict] = None,
     session_id=None,
+    user_id=None,
 ) -> dict:
     """Log a contribution and return the problem's new confidence.
 
@@ -559,12 +601,13 @@ def record_contribution(
     # insert was skipped, which is exactly the signal we need below.
     inserted = query_one(
         """
-        INSERT INTO contributions (problem_id, kind, transcript, details, session_id)
-        VALUES (%s, %s, %s, %s::jsonb, %s)
+        INSERT INTO contributions (problem_id, kind, transcript, details, session_id, user_id)
+        VALUES (%s, %s, %s, %s::jsonb, %s, %s)
         ON CONFLICT DO NOTHING
         RETURNING id::text AS id
         """,
-        [_as_uuid(problem_id), kind, transcript, json.dumps(details or {}), session_id],
+        [_as_uuid(problem_id), kind, transcript, json.dumps(details or {}), session_id,
+         user_id],
     )
 
     if inserted is None:

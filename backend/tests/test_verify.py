@@ -4,12 +4,12 @@ from app.schemas.verify import VerifyResponse
 
 
 def test_unknown_problem_is_404(client):
-    r = client.post("/verify", json={"problem_id": "nope", "code": "print(1)", "language": "python"})
+    r = client.post("/api/verify", json={"problem_id": "nope", "code": "print(1)", "language": "python"})
     assert r.status_code == 404
 
 
 def test_empty_code_is_422(client, any_slug):
-    r = client.post("/verify", json={"problem_id": any_slug, "code": "  ", "language": "python"})
+    r = client.post("/api/verify", json={"problem_id": any_slug, "code": "  ", "language": "python"})
     assert r.status_code == 422
 
 
@@ -18,8 +18,8 @@ def test_problem_without_tests_degrades(client, monkeypatch):
     from app.services import database_service
 
     monkeypatch.setattr(database_service, "get_test_cases", lambda *a, **k: [])
-    rows = client.get("/problems", params={"limit": 1}).json()["problems"]
-    r = client.post("/verify", json={"problem_id": rows[0]["slug"],
+    rows = client.get("/api/problems", params={"limit": 1}).json()["problems"]
+    r = client.post("/api/verify", json={"problem_id": rows[0]["slug"],
                                      "code": "print(1)", "language": "python"})
     assert r.status_code == 200
     assert r.json()["total"] == 0
@@ -36,7 +36,7 @@ def test_judge_failure_does_not_500(client, monkeypatch, any_slug):
                         lambda req, cases, problem=None: VerifyResponse(
                             status="Judge0 unavailable: ConnectError",
                             passed=0, total=len(cases)))
-    r = client.post("/verify", json={"problem_id": any_slug,
+    r = client.post("/api/verify", json={"problem_id": any_slug,
                                      "code": "print(1)", "language": "python"})
     assert r.status_code == 200
     assert "unavailable" in r.json()["status"]
@@ -81,7 +81,7 @@ def test_java_starter_declares_class_main():
 
 
 def test_languages_endpoint_lists_starters(client):
-    body = client.get("/languages").json()
+    body = client.get("/api/languages").json()
     assert body, "no languages exposed"
     assert {"id", "label", "monaco", "starter"} <= set(body[0])
     assert any(l["id"] == "python" for l in body)
@@ -89,13 +89,13 @@ def test_languages_endpoint_lists_starters(client):
 
 def test_progress_is_empty_without_a_session(client):
     """An unidentified caller is a supported state, not an error."""
-    body = client.get("/progress").json()
+    body = client.get("/api/progress").json()
     assert body == {"solved": [], "attempted": [], "runs": 0, "solved_count": 0}
 
 
 def test_progress_ignores_a_malformed_session_header(client):
     """A bad header degrades to anonymous rather than 400ing the request."""
-    r = client.get("/progress", headers={"X-Session-Id": "not-a-uuid"})
+    r = client.get("/api/progress", headers={"X-Session-Id": "not-a-uuid"})
     assert r.status_code == 200
     assert r.json()["solved"] == []
 

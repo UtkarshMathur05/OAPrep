@@ -162,11 +162,19 @@ Copy `.env.example` to `.env`. **Never commit `.env`** — it is gitignored.
 | `POSTGRES_USER` / `_PASSWORD` / `_DB` / `_PORT` | Consumed by `docker-compose.yml` |
 | `JUDGE0_URL` | `https://ce.judge0.com`, or a RapidAPI/self-hosted instance |
 | `JUDGE0_API_KEY` / `JUDGE0_API_HOST` | Only for RapidAPI |
-| `CORS_ORIGINS` | Comma-separated allowed origins (no wildcard) |
+| `CORS_ORIGINS` | Comma-separated allowed origins (no wildcard). Empty in the single-origin deployment, where there is no cross-origin caller |
 | `USE_MOCK_AI` | `true` → backend returns canned AI/Judge0 responses |
+| `AUTH_SECRET` | Signs the session cookie, the OAuth state and the email links. Generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `PUBLIC_APP_URL` / `PUBLIC_API_URL` | Used literally by OAuth redirects and email links. Default to `RENDER_EXTERNAL_URL` when deployed |
+| `FRONTEND_DIST` | Where the built frontend is. When it exists, the backend serves it — see [docs/DEPLOY.md](docs/DEPLOY.md) |
+
+`.env.example` is the full list, with the reasoning for each.
 
 The frontend reads its own `frontend/.env` (`VITE_API_BASE_URL`, `VITE_USE_MOCK`);
 only `VITE_*` variables reach the browser, so never put a key there.
+`VITE_API_BASE_URL` ends in `/api` — every endpoint carries that prefix, because
+deployed, one origin serves both the API and the app and `/problems` is a page as
+well as an endpoint.
 
 ---
 
@@ -377,6 +385,9 @@ cd frontend && npm run dev
 | API docs (live schema) | http://localhost:8000/docs |
 | Health | http://localhost:8000/health |
 | Postgres | `localhost:5432`, db/user/password `recollect` |
+
+Deploying instead of demoing on localhost: [docs/DEPLOY.md](docs/DEPLOY.md).
+It runs on free tiers, in one service, with the database on Neon.
 
 ### Check it before demoing
 

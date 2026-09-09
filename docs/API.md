@@ -1,6 +1,18 @@
 # API Contract
 
-Base URL (dev): `http://localhost:8000` · Interactive docs: `/docs`
+Base URL (dev): `http://localhost:8000/api` · Interactive docs: `/docs`
+
+**Every path below is served under `/api`.** The prefix is not decoration: in
+deployment one process serves both the API and the app from one origin (a
+session-cookie requirement — see `docs/DEPLOY.md`), and there `/problems` is a
+page somebody can navigate to as well as an endpoint. The API takes the prefix,
+the pages keep the clean URLs, and the prefix is on in development too so the
+deployed layout is the one being exercised. `API_PREFIX` in
+`backend/app/config.py` is the single definition; `API_BASE` in
+`frontend/src/services/api.ts` is the client half.
+
+`/health` and `/health/db` stay at the root — they are operational probes rather
+than part of this contract, and no page claims those paths.
 
 This file is the **integration boundary** between the three developers. Change it
 only by agreement — then update `backend/app/schemas/` and
@@ -178,18 +190,104 @@ script, not a method (§9), and `starter_code` is written to match.
 
 ## Identity
 
-Every request may carry an `X-Session-Id` header holding a UUID the browser
-generates once and keeps. It identifies a **browser, not a person** — there is
-no authentication yet — and it is what runs, submissions and contributions are
-attributed to.
+Two things identify a caller, and they are not the same kind of thing.
 
-Omitting it is supported everywhere: the call still works, it just accumulates
-no progress. A malformed value degrades to anonymous rather than `400`-ing a
-request that would otherwise succeed.
+**`X-Session-Id`** — a UUID the browser generates once and keeps, sent as a
+header. Identifies a **browser, not a person**: it is free to mint, it is never
+a credential, and it is what a signed-out visitor's runs and contributions are
+attributed to. Omitting it is supported everywhere; the call still works, it
+just accumulates no progress. A malformed value degrades to anonymous rather
+than `400`-ing a request that would otherwise succeed.
 
-> Server-side this is resolved in exactly one place, `app/identity.py`. When
-> accounts land, that function starts returning a user id and no other module
-> changes — which is why the column exists now rather than later.
+**The session cookie** — httpOnly, set by the auth endpoints below, and the only
+thing that establishes an account. Browser clients must send credentials
+(`withCredentials` / `credentials: 'include'`); the API allows them and lists
+explicit origins, never `*`.
+
+Send both. Signing in **claims** the browser's anonymous history into the
+account, which is the reason the session id is stored at all.
+
+> Server-side both are resolved in exactly one place, `app/identity.py`, which
+> returns a `Principal` carrying `user_id` and `session_id`. Progress queries
+> prefer the account, so a signed-in user's history follows them across
+> browsers.
+
+---
+
+## POST /auth/signup · POST /auth/signin
+
+**Request**
+```json
+{ "email": "ada@example.com", "password": "at least 8 chars", "display_name": "Ada" }
+```
+(`display_name` is signup-only and optional.)
+
+**Response** — sets the session cookie.
+```json
+{
+  "user": {
+    "id": "…", "email": "ada@example.com", "email_verified": false,
+    "display_name": "Ada", "avatar_url": null,
+    "has_password": true, "providers": []
+  },
+  "claimed": { "submissions": 3, "contributions": 1, "problems": 0 }
+}
+```
+
+`claimed` is what this sign-in pulled over from the anonymous session. Zeroes
+are normal — a first visit on a clean browser has nothing to claim.
+
+`has_password` is false for an account that only ever used GitHub or Google, so
+the UI offers "set a password" rather than "change password".
+
+Signup returns `409` for an address that already exists. Signin returns `401`
+with **the same message** for a wrong password and for an unknown account —
+distinguishing them is an account-enumeration oracle, so do not surface a
+different UI for the two.
+
+## POST /auth/signout
+
+Revokes the session server-side and clears the cookie. Always `{"ok": true}`.
+
+## GET /auth/me
+
+```json
+{ "user": null, "guest_runs_left": 2 }
+```
+
+**200 with a null user when signed out**, not `401`. Signed out is the normal
+state for most visitors, and a client that has to treat an error as "fine" will
+eventually treat a real error as fine too.
+
+`guest_runs_left` is how many more distinct problems a signed-out visitor may
+run; `null` once signed in.
+
+## POST /auth/forgot-password · POST /auth/reset-password · POST /auth/verify-email
+
+`forgot-password` takes `{ "email": … }` and **always** returns the same
+`{ "ok": true, "message": … }`, whether or not that address has an account.
+
+`reset-password` takes `{ "token": …, "password": … }`, signs the user in, and
+returns the same shape as signin. A reset link works **once** and revokes every
+other session for that account.
+
+`verify-email` takes `{ "token": … }` and returns the updated user.
+
+Both links expire after 24 hours; an expired or reused one is a `400` with a
+sentence explaining which.
+
+## GET /auth/{provider}/start · GET /auth/{provider}/callback
+
+`provider` is `github` or `google`. These are **browser navigations, not fetches**
+— the provider redirects the browser, and an XHR cannot follow that.
+
+`/start?next=/solve/two-sum` redirects to the provider. `/callback` finishes the
+exchange, sets the cookie, claims anonymous history, and redirects to
+`PUBLIC_APP_URL + next`. Every failure also redirects — to `/signin?error=…` —
+because this URL is in the address bar and a raw JSON error object is the worst
+thing a person could be shown there.
+
+`/start` returns `503` when that provider has no client id configured.
 
 ---
 
@@ -264,6 +362,13 @@ Supported `language` values: `python`, `java`, `cpp`, `c`, `javascript`, `typesc
 `Compilation Error`, `Runtime Error`.
 
 ---
+
+
+`requires_sign_in: true` (with `total: 0`) means a signed-out visitor has used
+up their free problems — the first `GUEST_PROBLEM_LIMIT` (default 2) distinct
+ones. Their code was **not** run and nothing is wrong with it, so show a
+sign-in prompt rather than an error. A problem they had already started stays
+free, and the limit does not apply once signed in.
 
 ## GET /problems
 

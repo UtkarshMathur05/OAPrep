@@ -42,6 +42,11 @@ class VerifyResponse(BaseModel):
     runs: int = 0
     submissions: int = 0
 
+    # Set when a signed-out visitor has used up their free problems. The editor
+    # shows a sign-in prompt rather than an error, because this is not a
+    # failure — their code was never run, and nothing is wrong with it.
+    requires_sign_in: bool = False
+
 
 class ProblemProgress(BaseModel):
     """One problem, from the current session's point of view."""

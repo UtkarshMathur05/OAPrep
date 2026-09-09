@@ -14,6 +14,7 @@ import type {
   FacetsResponse,
   ContributeMatchRequest, ContributeMatchResponse,
   ContributeRequest, ContributeResponse,
+  AuthResponse, MeResponse, PublicUser,
 } from '../types'
 import {
   mockMemoryResponse, mockSearchResponse, mockReconstructResponse, mockVerifyResponse,
@@ -22,13 +23,34 @@ import {
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
+/**
+ * Where the API is.
+ *
+ * Always ends in `/api`. Served from one origin, `/problems` is both a page and
+ * an endpoint, so the API takes the prefix and the pages keep the clean URLs —
+ * and the prefix is on in development too, so the deployed layout is the one
+ * being exercised.
+ *
+ * Deployed this is the relative `/api`; locally it is the backend across the
+ * port at `http://localhost:8000/api`. Trailing slashes are stripped so that
+ * `${API_BASE}/auth/...` can never become the protocol-relative `//auth/...`,
+ * which a browser reads as a hostname rather than a path.
+ */
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api')
+  .replace(/\/+$/, '')
+
 export const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  // The session cookie is httpOnly, so JavaScript never sees it — but axios
+  // still has to be told to send it. Without this every request arrives signed
+  // out and the symptom is "signing in appears to work, then does not".
+  withCredentials: true,
 })
 
-// Every request carries the session, so no call site has to remember to. When
-// real auth lands this interceptor is where the token goes instead.
+// Every request carries the anonymous browser id, so no call site has to
+// remember to. It stays after accounts land: it is what an unclaimed
+// contribution or run is attributed to, and what sign-in claims.
 client.interceptors.request.use((config) => {
   config.headers.set('X-Session-Id', getSessionId())
   return config
@@ -111,4 +133,62 @@ export async function getProgress(): Promise<SessionProgress> {
 export async function getProblemProgress(idOrSlug: string): Promise<ProblemProgress> {
   const { data } = await client.get<ProblemProgress>(`/progress/${idOrSlug}`)
   return data
+}
+
+
+// ------------------------------------------------------------------- accounts
+//
+// Not mocked. VITE_USE_MOCK exists so the UI can be built without a backend,
+// and a fake sign-in that never sets a cookie would report success and then
+// behave as signed out everywhere else — a worse failure than having no
+// account at all. With mocks on, these simply fail and the UI stays signed out.
+
+export async function getMe(): Promise<MeResponse> {
+  const { data } = await client.get<MeResponse>('/auth/me')
+  return data
+}
+
+export async function signUp(body: {
+  email: string; password: string; display_name?: string
+}): Promise<AuthResponse> {
+  const { data } = await client.post<AuthResponse>('/auth/signup', body)
+  return data
+}
+
+export async function signIn(body: { email: string; password: string }): Promise<AuthResponse> {
+  const { data } = await client.post<AuthResponse>('/auth/signin', body)
+  return data
+}
+
+export async function signOut(): Promise<void> {
+  await client.post('/auth/signout')
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await client.post('/auth/forgot-password', { email })
+}
+
+export async function resetPassword(token: string, password: string): Promise<AuthResponse> {
+  const { data } = await client.post<AuthResponse>('/auth/reset-password', { token, password })
+  return data
+}
+
+export async function verifyEmail(token: string): Promise<PublicUser> {
+  const { data } = await client.post<PublicUser>('/auth/verify-email', { token })
+  return data
+}
+
+export async function resendVerification(): Promise<void> {
+  await client.post('/auth/resend-verification')
+}
+
+/**
+ * Where to send the browser to start an OAuth sign-in.
+ *
+ * A full-page navigation, not a fetch: the provider redirects the browser back
+ * to the API, which sets the cookie and bounces to `next`. XHR cannot follow
+ * that, and the cookie would be set on a response nobody is looking at.
+ */
+export function oauthUrl(provider: 'github' | 'google', next = '/'): string {
+  return `${API_BASE}/auth/${provider}/start?next=${encodeURIComponent(next)}`
 }

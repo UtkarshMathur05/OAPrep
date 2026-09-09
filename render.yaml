@@ -1,0 +1,69 @@
+# Render blueprint: one free web service, serving the API and the frontend from
+# a single origin.
+#
+# The database is deliberately NOT declared here. Render's free Postgres expires
+# 30 days after creation, and the corpus is the product — point DATABASE_URL at
+# a Neon free database instead (pgvector is available on every Neon plan, and
+# this corpus is ~21MB). See docs/DEPLOY.md.
+
+services:
+  - type: web
+    name: memoize
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # Rotating this signs everybody out and voids outstanding email links,
+      # which is the correct response to it leaking. Render generates it once
+      # and keeps it across deploys.
+      - key: AUTH_SECRET
+        generateValue: true
+
+      # PUBLIC_APP_URL and PUBLIC_API_URL are intentionally absent: with one
+      # origin they are both RENDER_EXTERNAL_URL, which Render injects and
+      # config.py falls back to. Set them only when you add a custom domain.
+
+      # Set in the dashboard — a connection string is a credential.
+      - key: DATABASE_URL
+        sync: false
+
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: USE_MOCK_AI
+        value: "false"
+
+      - key: JUDGE0_URL
+        value: https://ce.judge0.com
+      - key: JUDGE0_API_KEY
+        sync: false
+      - key: JUDGE0_API_HOST
+        sync: false
+
+      # No CORS: the browser is talking to the origin it was served from. An
+      # empty list is the honest expression of that, and it means a stray
+      # cross-origin caller is refused rather than quietly allowed.
+      - key: CORS_ORIGINS
+        value: ""
+
+      # Until a domain exists, links are printed to the service log rather than
+      # delivered. That is testable and visible; a mail provider misconfigured
+      # into silence is neither. See docs/DEPLOY.md for the switch.
+      - key: EMAIL_PROVIDER
+        value: console
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+
+      # Optional. With neither set, only email and password sign-in is offered.
+      # Callback URL to register: https://<your-service>.onrender.com/api/auth/<provider>/callback
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

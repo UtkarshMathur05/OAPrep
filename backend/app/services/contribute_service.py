@@ -59,14 +59,20 @@ def match(req: ContributeMatchRequest) -> ContributeMatchResponse:
     )
 
 
-def submit(req: ContributeRequest, session_id=None) -> ContributeResponse:
-    """Either corroborate an existing problem or create a community one."""
+def submit(req: ContributeRequest, principal=None) -> ContributeResponse:
+    """Either corroborate an existing problem or create a community one.
+
+    `principal` carries both ids: the account when there is one, and the browser
+    session either way. Both are stored — the session so an anonymous
+    contribution stays claimable, the user so `uq_contribution_per_user` can do
+    what a session id never could and make the confidence count honest.
+    """
     if req.confirm_problem_id:
-        return _confirm(req, session_id)
-    return _create(req, session_id)
+        return _confirm(req, principal)
+    return _create(req, principal)
 
 
-def _confirm(req: ContributeRequest, session_id=None) -> ContributeResponse:
+def _confirm(req: ContributeRequest, principal=None) -> ContributeResponse:
     problem_id = database_service.resolve_problem_id(req.confirm_problem_id)
     if problem_id is None:
         raise HTTPException(404, "That problem no longer exists.")
@@ -77,7 +83,8 @@ def _confirm(req: ContributeRequest, session_id=None) -> ContributeResponse:
         kind="confirmed",
         transcript=req.transcript,
         details=req.details.model_dump(),
-        session_id=session_id,
+        session_id=getattr(principal, "session_id", None),
+        user_id=getattr(principal, "user_id", None),
     )
     community = row["origin"] == "community"
     return ContributeResponse(
@@ -102,7 +109,7 @@ def _confirm(req: ContributeRequest, session_id=None) -> ContributeResponse:
     )
 
 
-def _create(req: ContributeRequest, session_id=None) -> ContributeResponse:
+def _create(req: ContributeRequest, principal=None) -> ContributeResponse:
     if USE_MOCK_AI or not GEMINI_API_KEY:
         raise HTTPException(
             503, "Contributing needs the AI pipeline. Set USE_MOCK_AI=false with a "
@@ -145,6 +152,7 @@ def _create(req: ContributeRequest, session_id=None) -> ContributeResponse:
         topics=topics,
         companies=details.get("companies") or [],
         embedding=vector,
+        created_by=getattr(principal, "user_id", None),
     )
 
     # The row is inserted with contribution_count 0; this call is what makes it
@@ -152,7 +160,8 @@ def _create(req: ContributeRequest, session_id=None) -> ContributeResponse:
     # second person to describe a problem pushed it straight to 0.65.
     recorded = database_service.record_contribution(
         created["id"], kind="created", transcript=req.transcript, details=details,
-        session_id=session_id)
+        session_id=getattr(principal, "session_id", None),
+        user_id=getattr(principal, "user_id", None))
 
     stored = _seed_test_cases(created["id"], drafted)
 

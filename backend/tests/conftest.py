@@ -21,7 +21,7 @@ def client() -> TestClient:
 @pytest.fixture(scope="session")
 def any_slug(client: TestClient) -> str:
     """A slug that exists in whatever corpus is loaded."""
-    rows = client.get("/problems", params={"limit": 1}).json()["problems"]
+    rows = client.get("/api/problems", params={"limit": 1}).json()["problems"]
     if not rows:
         pytest.skip("no problems loaded — run the corpus pipeline")
     return rows[0]["slug"]

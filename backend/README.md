@@ -16,6 +16,12 @@ Interactive docs: http://localhost:8000/docs · health check: `/health`
 
 Environment comes from the repo-root `.env` (copy `.env.example` first).
 
+**Every endpoint is under `/api`** — `/api/problems`, `/api/auth/me`, and so on.
+`/health` and `/health/db` are the exceptions, being probes rather than API. The
+prefix exists because in deployment one process serves the API *and* the built
+frontend from a single origin, where `/problems` is a page as well as an
+endpoint. `API_PREFIX` in `app/config.py` is the single definition of it.
+
 ## Layout
 
 ```
@@ -95,6 +101,9 @@ See [../docs/API.md](../docs/API.md) for the full contract.
 **Status** says what the endpoint actually does right now — `live` is real,
 `mocked` returns canned data of the correct shape.
 
+Paths are shown without the `/api` prefix that all of them except the two
+`/health` probes carry.
+
 | Method | Path | Purpose | Status |
 | --- | --- | --- | --- |
 | GET | `/health` | liveness | live |
@@ -158,20 +167,80 @@ embedding is a `503` and saves nothing, because a row with no vector exists in
 the browse list but is invisible to recall — the most confusing possible
 outcome.
 
-## Identity and sessions
+## Identity and accounts
 
 `app/identity.py` is the **only** module that knows how a caller is identified.
-Today it reads an `X-Session-Id` UUID the browser generates and stores; there is
-no auth, so it identifies a browser, not a person, and the docstring says so.
+It answers with a `Principal`, which carries two ids that are not the same kind
+of thing:
 
-Everything else — `submissions.session_id`, `contributions.session_id`, both
-progress queries — goes through `current_session(request)`. When accounts land,
-that one function starts returning a user id and nothing else changes. The
-columns exist now so today's activity is claimable later instead of being an
-anonymous pile that has to be discarded.
+| | What it is | Trust |
+| --- | --- | --- |
+| `session_id` | a UUID the browser generates and stores, sent as `X-Session-Id` | none — free to mint, never a credential |
+| `user_id` | an account, established by the signed session cookie | this one |
 
-A missing or malformed header degrades to anonymous rather than erroring: an
-unidentified caller can still run code, they just accumulate no progress.
+A missing or malformed header, or no cookie, degrades to anonymous rather than
+erroring: an unidentified caller can still browse and run code.
+
+**§20b predicted the wrong shape.** The plan was that `current_session()` would
+start returning a user id, so "no other file changes". One column holding two id
+spaces cannot be foreign-keyed, cannot distinguish an anonymous row from a
+user's, and makes claiming a destructive rewrite. So `user_id` sits *beside*
+`session_id` in `submissions` and `contributions`, and `problems.created_by`
+records who added a community problem — which nothing recorded before, so
+"questions I added" was unanswerable regardless of accounts.
+
+`principal.owner` prefers the account: a signed-in user's history is theirs
+across every browser they have used, and only a signed-out visitor is scoped to
+one browser.
+
+### Claiming
+
+Every sign-in runs `auth_service.claim()`, which fills `user_id` on rows that
+have this browser's `session_id` and no owner yet. Not just the first sign-in —
+people work signed out on a second machine, and that history has no reason to be
+stranded. Only unclaimed rows move, so signing in on a shared browser cannot
+take somebody else's attributed work.
+
+### Sessions are rows, not a JWT
+
+The cookie holds a random token; `auth_sessions` stores only its SHA-256. Two
+consequences worth the table: reading the database hands nobody a live session,
+and **sign-out actually ends the session**. A self-contained JWT cannot be
+revoked, so a captured one stays valid until it expires and "sign out" becomes a
+lie about the one case it exists for.
+
+### What is deliberately not clever
+
+* **Sign-in failures say one thing.** "No such account" and "wrong password" as
+  separate messages is an account-enumeration oracle, and so is a
+  forgot-password endpoint that behaves differently for an unknown address.
+  Signup is the exception: refusing a duplicate without saying why leaves the
+  person retrying forever, and the address is already known to whoever holds it.
+* **OAuth links to an existing account only on a provider-verified email.**
+  Otherwise anyone who can set an arbitrary address at a provider walks into the
+  account that owns it. GitHub is asked for its verified primary address
+  explicitly; Google's `email_verified` is checked.
+* **Password reset needs no table.** The token is signed and carries the user's
+  `password_changed_at`; using it changes the password, which voids every token
+  minted before. Single-use without storage. It also revokes every other
+  session, because "somebody else may have my account" is what resets are for.
+* **Email delivery is a seam.** `EMAIL_PROVIDER=console` prints the link to the
+  log, so the whole verify/reset flow works with no provider account and no
+  domain — the same idea as `USE_MOCK_AI`. It is loud rather than silent: mail
+  that vanishes without trace is how you ship a reset flow that never worked.
+
+### The guest limit
+
+A signed-out visitor may run `GUEST_PROBLEM_LIMIT` (2) **distinct problems**;
+iterating on one you have already started is always free. Enforced in `/verify`
+because a client cannot be trusted to enforce it, and returned as
+`requires_sign_in: true` with `total: 0` rather than an error — the code never
+ran, so nothing is wrong with it and the editor shows a prompt, not a failure.
+
+It is a nudge, not a boundary. Clearing site data mints a new session id and
+resets the count, and the code says so rather than implying otherwise. Treating
+it as real enforcement would be the same mistake as treating a session id as a
+credential.
 
 ### Run vs submit
 
@@ -182,12 +251,15 @@ problem on the user's behalf takes the decision away from them.
 `bool_or(kind = 'submit' AND total > 0 AND passed = total)`, and there are tests
 for both halves.
 
-### One contribution per session
+### One contribution per account
 
-`uq_contribution_per_session` is a partial unique index on
-`(problem_id, session_id)`. Confidence measures how many *independent* people
-described a problem, so without it one person clicking "that's it" five times
-walks a problem from 0.35 to 0.95 alone. `record_contribution` inserts with
+`uq_contribution_per_user` is a partial unique index on `(problem_id, user_id)`,
+and `uq_contribution_per_session` still covers signed-out traffic. Confidence
+measures how many *independent* people described a problem, so without it one
+person clicking "that's it" five times walks a problem from 0.35 to 0.95 alone.
+
+The per-session index was never enough — §20b said as much — because a session
+id is free to mint. The per-user one is what makes the formula honest. `record_contribution` inserts with
 `ON CONFLICT DO NOTHING` and returns `counted: False` when the row was skipped,
 so the API can tell the user their account is already on file rather than
 pretending it moved the number.
@@ -465,6 +537,42 @@ rather than failing on the first request mid-demo. `.env.example` placeholders
 ```json
 { "status": "ok", "mock_ai": true, "ai_ready": false }
 ```
+
+## Deployment
+
+Full runbook: [../docs/DEPLOY.md](../docs/DEPLOY.md). What the backend
+contributes to it:
+
+**It serves the frontend.** If `frontend/dist` exists (or `FRONTEND_DIST` points
+somewhere that does), `main.py` mounts it last, behind every API route, with
+unmatched HTML navigations falling back to `index.html` so a deep link like
+`/problems/two-sum` reaches React Router. Locally the directory does not exist
+and nothing changes — Vite still serves the app on 5173.
+
+This is a cookie decision rather than a packaging one. `onrender.com` is on the
+Public Suffix List, so `app.onrender.com` and `api.onrender.com` are different
+*sites* and a `SameSite=Lax` cookie is not sent between them: sign-in would
+return 200, set the cookie, and every request afterwards would arrive signed
+out. `COOKIE_SAMESITE=none` avoids that at the price of a third-party cookie,
+which Safari blocks. One origin makes Lax correct and CORS unnecessary.
+
+`auth_warnings()` catches the mistake at boot — it compares the *sites* of
+`PUBLIC_APP_URL` and `PUBLIC_API_URL`, treating the multi-label public suffixes
+the free tiers hand out (`onrender.com`, `vercel.app`, …) as the sites they are.
+
+**Two URLs come from the platform.** `PUBLIC_APP_URL` and `PUBLIC_API_URL`
+default to `RENDER_EXTERNAL_URL` when it is set, so the single-origin deployment
+needs neither. `COOKIE_SECURE` is then derived from that URL being https.
+
+**The database is external.** Render's free Postgres expires 30 days after
+creation and the corpus is the product, so `DATABASE_URL` points at Neon, whose
+free tier carries pgvector. Neon has no `docker-entrypoint-initdb.d`, so
+`database/init/*.sql` is applied by hand once — see the runbook.
+
+**The image is the contract.** `Dockerfile` at the repo root builds the frontend
+with Node and runs it with Python, keeping `backend/` and `ai/` siblings because
+`app/__init__.py` puts the repo root on `sys.path`. Build and run it locally
+before deploying; it catches the single-origin wiring without a push.
 
 ## Tests
 

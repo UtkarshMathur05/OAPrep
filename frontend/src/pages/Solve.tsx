@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import { useAuth } from '../lib/auth'
 import Editor from '@monaco-editor/react'
 import type { Language, Problem, ProblemDetail, VerifyResponse } from '../types'
 import { getLanguages, getProblem, getProblemProgress, verifySolution } from '../services/api'
@@ -43,6 +44,8 @@ export default function Solve() {
   const [runs, setRuns] = useState(0)
   const [proved, setProved] = useState(false)   // a Run passed for the code as it stands
   const [split, setSplit] = useState(42)
+
+  const { user, guestRunsLeft } = useAuth()
 
   const detail = problem && 'exec_mode' in problem ? problem : null
   const functional = detail?.exec_mode === 'functional'
@@ -214,6 +217,18 @@ export default function Solve() {
         {solved && (
           <span className="shrink-0 border border-easy/40 bg-easy/10 px-2 py-0.5 font-mono text-micro text-easy">
             solved
+          </span>
+        )}
+
+        {/* Warn before the wall, not at it. Only worth saying on the last one —
+            "2 free problems left" on a first visit is noise. */}
+        {!user && guestRunsLeft === 1 && (
+          <span className="hidden font-mono text-micro text-medium lg:inline">
+            last free problem —{' '}
+            <Link to={`/signin?next=${encodeURIComponent(location.pathname)}`} className="link">
+              sign in
+            </Link>{' '}
+            to keep your work
           </span>
         )}
 
@@ -394,7 +409,10 @@ function Console({
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-2 text-left">
         <span className="font-mono text-small">results</span>
         {running && <span className="font-mono text-micro text-accent">{running}ning…</span>}
-        {result && (
+        {/* The sign-in prompt owns the panel body instead. Repeating it here
+            put the same sentence on screen twice, in the red reserved for a
+            wrong answer, next to a meaningless 0/0. */}
+        {result && !result.requires_sign_in && (
           <>
             <span className={`font-mono text-small ${passed ? 'text-easy' : 'text-hard'}`}>
               {result.status}
@@ -420,7 +438,21 @@ function Console({
             </p>
           )}
 
-          {result && (
+          {/* Not a failure: their code never ran, so the panel offers the way
+              forward instead of a red status and an empty test grid. */}
+          {result?.requires_sign_in && (
+            <div className="max-w-reading">
+              <p className="text-small leading-relaxed text-ink2">{result.status}</p>
+              <Link
+                to={`/signin?next=${encodeURIComponent(location.pathname)}`}
+                className="btn-accent mt-3 inline-block"
+              >
+                sign in to keep going
+              </Link>
+            </div>
+          )}
+
+          {result && !result.requires_sign_in && (
             <>
               <div className="flex flex-wrap gap-1.5">
                 {result.results.map((r) => (

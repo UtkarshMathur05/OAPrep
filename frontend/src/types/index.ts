@@ -162,6 +162,39 @@ export interface ProblemDetail extends ProblemSummary {
   unsolvable_reason: string | null
 }
 
+// ------------------------------------------------------------------ accounts
+
+/** What the browser is allowed to know about an account. Never a password. */
+export interface PublicUser {
+  id: string
+  email: string
+  email_verified: boolean
+  display_name: string
+  avatar_url: string | null
+  /** False for an account that only ever signs in with GitHub or Google. */
+  has_password: boolean
+  providers: string[]
+}
+
+/** What signing in pulled across from the anonymous browser session. */
+export interface Claimed {
+  submissions: number
+  contributions: number
+  problems: number
+}
+
+export interface AuthResponse {
+  user: PublicUser
+  claimed: Claimed
+}
+
+export interface MeResponse {
+  /** Null when signed out, which is a normal 200 rather than a 401. */
+  user: PublicUser | null
+  /** Problems a signed-out visitor may still run. Null once signed in. */
+  guest_runs_left: number | null
+}
+
 export interface ProblemListResponse {
   total: number
   limit: number
@@ -294,8 +327,15 @@ export interface VerifyResponse {
   kind: 'run' | 'submit'
   all_passed: boolean
 
-  /** This session's standing on this problem, after the call. */
+  /** This caller's standing on this problem, after the call. */
   solved: boolean
   runs: number
   submissions: number
+
+  /**
+   * The signed-out visitor has used up their free problems. Not an error: the
+   * code never ran and there is nothing wrong with it, so the editor shows a
+   * sign-in prompt rather than a failure.
+   */
+  requires_sign_in: boolean
 }

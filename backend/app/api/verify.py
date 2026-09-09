@@ -4,7 +4,8 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.identity import current_session
+from app.config import GUEST_PROBLEM_LIMIT
+from app.identity import current_principal
 from app.languages import LANGUAGES
 from app.schemas.verify import (
     LanguageOut, ProblemProgress, SessionProgress, VerifyRequest, VerifyResponse,
@@ -93,14 +94,14 @@ def languages() -> list[LanguageOut]:
 @router.get("/progress", response_model=SessionProgress)
 def progress(request: Request) -> SessionProgress:
     """What the calling session has solved and attempted, for marking listings."""
-    return SessionProgress(**database_service.session_progress(current_session(request)))
+    return SessionProgress(**database_service.session_progress(current_principal(request)))
 
 
 @router.get("/progress/{problem_id}", response_model=ProblemProgress)
 def problem_progress(problem_id: str, request: Request) -> ProblemProgress:
     """The calling session's standing on one problem. Survives a page reload."""
     return ProblemProgress(
-        **database_service.problem_progress(current_session(request), problem_id)
+        **database_service.problem_progress(current_principal(request), problem_id)
     )
 
 
@@ -113,7 +114,8 @@ def verify(req: VerifyRequest, request: Request) -> VerifyResponse:
     if database_service.resolve_problem_id(req.problem_id) is None:
         raise HTTPException(status_code=404, detail=f"No problem matching '{req.problem_id}'")
 
-    session = current_session(request)
+    principal = current_principal(request)
+    session = principal.session_id
 
     row = database_service.get_problem(req.problem_id) or {}
 
@@ -126,7 +128,31 @@ def verify(req: VerifyRequest, request: Request) -> VerifyResponse:
     verdict = _solvability(row | {"test_case_count": len(cases)})
     if not verdict["solvable"]:
         return VerifyResponse(status=verdict["unsolvable_reason"], passed=0, total=0,
-                              kind=req.kind, **_standing(session, req.problem_id))
+                              kind=req.kind, **_standing(principal, req.problem_id))
+
+    # The free-problem limit, enforced here because the client cannot be trusted
+    # to enforce it — but a nudge rather than a wall, and the comment says so:
+    # clearing site data mints a new session id and resets the count. Treating
+    # it as a real boundary would be the same mistake as treating a session id
+    # as a credential (§20b).
+    #
+    # Iterating on a problem you have already started is always free; the limit
+    # is on how many *different* problems you work through signed out.
+    #
+    # After the solvable check on purpose: asking somebody to sign in to run a
+    # SQL question, which will never run for anyone, spends their goodwill on
+    # nothing.
+    if not principal.is_authenticated:
+        used = database_service.guest_problems_used(session)
+        already = database_service.problem_progress(principal, req.problem_id)["runs"]
+        if used >= GUEST_PROBLEM_LIMIT and not already:
+            return VerifyResponse(
+                status=f"Sign in to keep going — the first {GUEST_PROBLEM_LIMIT} "
+                       "problems are free, and signing in keeps the work you have "
+                       "already done.",
+                passed=0, total=0, kind=req.kind, requires_sign_in=True,
+                **_standing(principal, req.problem_id),
+            )
 
     if not cases and row.get("exec_mode") != "functional":
         # Only stdin problems generate their own cases. A functional problem's
@@ -139,7 +165,7 @@ def verify(req: VerifyRequest, request: Request) -> VerifyResponse:
         # Not recorded as an attempt: the user's code never ran, so counting it
         # against them would be wrong.
         return VerifyResponse(status="No test cases for this problem", passed=0, total=0,
-                              kind=req.kind, **_standing(session, req.problem_id))
+                              kind=req.kind, **_standing(principal, req.problem_id))
 
     result = judge_service.run_submission(req, cases, problem=row)
     result.kind = req.kind
@@ -148,17 +174,17 @@ def verify(req: VerifyRequest, request: Request) -> VerifyResponse:
     # Audit trail; never let a failed write sink the user's result.
     result.submission_id = database_service.save_submission(
         req.problem_id, req.code, req.language, result,
-        kind=req.kind, session_id=session,
+        kind=req.kind, session_id=session, user_id=principal.user_id,
     )
 
     # Read the standing back rather than incrementing in memory, so the counter
     # is the database's answer and stays right if two tabs are open.
-    for field, value in _standing(session, req.problem_id).items():
+    for field, value in _standing(principal, req.problem_id).items():
         setattr(result, field, value)
     return result
 
 
-def _standing(session, problem_id: str) -> dict:
-    """The session's counters for this problem, shaped for VerifyResponse."""
-    p = database_service.problem_progress(session, problem_id)
+def _standing(principal, problem_id: str) -> dict:
+    """The caller's counters for this problem, shaped for VerifyResponse."""
+    p = database_service.problem_progress(principal, problem_id)
     return {"solved": p["solved"], "runs": p["runs"], "submissions": p["submissions"]}

@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../lib/auth'
 
 /**
  * Two groups, not five equal links.
@@ -62,8 +63,12 @@ export default function Layout() {
               className="field w-52 py-1.5 font-mono text-micro"
             />
           </form>
+
+          <Account />
         </div>
       </header>
+
+      <Claimed />
 
       <main className="flex-1">
         <Outlet />
@@ -93,6 +98,129 @@ export default function Layout() {
           </p>
         </div>
       </footer>
+    </div>
+  )
+}
+
+/**
+ * "Your work came with you."
+ *
+ * The whole reason `session_id` was stored before accounts existed, and
+ * invisible unless it is said out loud — somebody who solved two problems
+ * signed out has no way to tell whether signing in kept them.
+ */
+function Claimed() {
+  const { claimed, dismissClaimed } = useAuth()
+  if (!claimed) return null
+
+  const parts = [
+    claimed.submissions && `${claimed.submissions} ${claimed.submissions === 1 ? 'run' : 'runs'}`,
+    claimed.contributions && `${claimed.contributions} ${claimed.contributions === 1 ? 'contribution' : 'contributions'}`,
+    claimed.problems && `${claimed.problems} ${claimed.problems === 1 ? 'problem you added' : 'problems you added'}`,
+  ].filter(Boolean) as string[]
+
+  return (
+    <div className="border-b border-line bg-panel">
+      <div className="shell flex items-center gap-4 py-2.5">
+        <p className="font-mono text-micro text-ink2">
+          Moved to your account: {parts.join(' · ')}.
+        </p>
+        <button
+          onClick={dismissClaimed}
+          className="tap ml-auto shrink-0 px-1 font-mono text-micro text-ink3 hover:text-ink"
+        >
+          dismiss
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Sign in, or who you are.
+ *
+ * Renders nothing at all while the first /auth/me is in flight. A "sign in"
+ * link that flickers into an avatar on every page load looks broken, and the
+ * gap is one request long.
+ */
+function Account() {
+  const { user, loading, signOut } = useAuth()
+  const location = useLocation()
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', away)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+
+  if (loading) return <span className="w-16 shrink-0" aria-hidden />
+
+  if (!user) {
+    // Carry where they were, so signing in returns them rather than dumping
+    // them on the home page.
+    const next = encodeURIComponent(location.pathname + location.search)
+    return (
+      <Link
+        to={`/signin?next=${next}`}
+        className="flex shrink-0 items-center self-center px-2 font-mono text-small text-ink2 transition-colors hover:text-ink"
+      >
+        sign in
+      </Link>
+    )
+  }
+
+  return (
+    <div ref={box} className="relative shrink-0 self-center">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="flex min-h-8 items-center gap-2 px-1 font-mono text-micro text-ink2 transition-colors hover:text-ink"
+      >
+        {user.avatar_url
+          ? <img src={user.avatar_url} alt="" width={24} height={24} className="h-6 w-6 shrink-0 border border-line" />
+          : <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center border border-line bg-raised text-ink2">
+              {user.display_name.slice(0, 1).toUpperCase()}
+            </span>}
+        <span className="hidden max-w-[8rem] truncate sm:inline">{user.display_name}</span>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-30 mt-2 w-56 border border-lineStrong bg-panel py-1"
+        >
+          <p className="truncate px-3 py-2 font-mono text-micro text-ink3">{user.email}</p>
+          {!user.email_verified && (
+            <p className="border-y border-line bg-medium/5 px-3 py-2 text-micro leading-relaxed text-medium">
+              Address not confirmed yet — check your inbox.
+            </p>
+          )}
+          <Link
+            to="/problems" role="menuitem" onClick={() => setOpen(false)}
+            className="block px-3 py-2 font-mono text-micro text-ink2 hover:bg-raised hover:text-ink"
+          >
+            my progress
+          </Link>
+          <button
+            role="menuitem"
+            onClick={() => { setOpen(false); void signOut() }}
+            className="block w-full px-3 py-2 text-left font-mono text-micro text-ink2 hover:bg-raised hover:text-ink"
+          >
+            sign out
+          </button>
+        </div>
+      )}
     </div>
   )
 }

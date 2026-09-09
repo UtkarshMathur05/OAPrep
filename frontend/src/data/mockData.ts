@@ -99,6 +99,7 @@ export const mockVerifyResponse: VerifyResponse = {
   results: [],
   kind: 'run',
   all_passed: true,
+  requires_sign_in: false,
   // Not solved: a passing run is a trial, and only an accepted submit
   // completes a problem. The mock has to model that or the UI built against
   // it will get the rule wrong.

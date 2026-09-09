@@ -23,6 +23,7 @@ docker compose down -v    # stop and DELETE the volume
 | `init/08_io_format.sql` | `problems.io_format` — the stdin contract in prose |
 | `init/09_functional.sql` | `exec_mode`, `signature`, `code_snippets`, `judge_mode` |
 | `init/10_signatures.sql` | The functional conversion — generated, committed (~2 MB) |
+| `init/11_auth.sql` | `users`, `auth_sessions`, and `user_id` on the activity tables |
 
 **Filename order matters.** Docker runs these alphabetically, and
 `04_seed_testcases.sql` references corpus problems by slug, so it must run after
@@ -234,3 +235,46 @@ docker exec -i memoize-db psql -U recollect -d recollect < database/init/09_func
 python -m ai.corpus.fetch_signatures        # ~70 min, network
 python -m ai.corpus.load_signatures --apply
 ```
+
+
+## Accounts (`11_auth.sql`)
+
+Two tables, not four.
+
+`users` holds the account. Providers are **columns** (`github_id`, `google_id`)
+rather than an identities table, for the same reason corpus metadata is columns:
+there are exactly two of them and a join buys nothing. `password_hash` is
+nullable — an account that only ever used GitHub has no password to guess, which
+is the point — and `password_changed_at` is what makes a signed, stateless reset
+token single-use, so there is no token table either.
+
+`auth_sessions` holds one row per signed-in browser, storing only the SHA-256 of
+the cookie's token. A self-contained JWT would need no table and could not be
+revoked; a row means signing out actually ends the session, and reading the
+table hands nobody a live one.
+
+### Why `user_id` sits beside `session_id`
+
+§20b planned for `app/identity.py` to start returning a user id in place of the
+session id, so nothing else would change. One column holding two id spaces
+cannot be foreign-keyed, cannot tell an anonymous row from a user's, and turns
+claiming into a destructive rewrite. So `submissions` and `contributions` carry
+both, and claiming is:
+
+```sql
+UPDATE submissions SET user_id = :uid
+ WHERE session_id = :sid AND user_id IS NULL;
+```
+
+`problems.created_by` is new rather than migrated: nothing recorded who added a
+community problem, so "questions I added" was unanswerable however you asked.
+
+### `uq_contribution_per_user`
+
+Partial unique index on `(problem_id, user_id)`. `uq_contribution_per_session`
+stays for signed-out traffic, but it never made confidence honest — a session id
+is free to mint. This one does.
+
+Claiming has to respect it: the same person may have corroborated a problem from
+two browsers, so the claim takes the oldest of each and leaves the rest
+anonymous rather than failing the sign-in on a constraint violation.

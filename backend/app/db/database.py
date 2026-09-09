@@ -72,6 +72,17 @@ def execute(sql: str, params: Any = None) -> dict | None:
         return cur.fetchone()
 
 
+def execute_count(sql: str, params: Any = None) -> int:
+    """Run an INSERT/UPDATE/DELETE and return how many rows it touched.
+
+    `execute` answers "what did this produce"; this answers "how much did it
+    change", which is what a claim or a bulk cleanup actually wants to report.
+    """
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.rowcount
+
+
 def healthcheck() -> dict:
     """Cheap liveness probe used by GET /health/db."""
     row = query_one(
